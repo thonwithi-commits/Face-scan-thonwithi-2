@@ -10,6 +10,7 @@
       --primary: #8d6e63;
       --accent: #ffc107;
       --danger: #ff5252;
+      --warning: #ff9800; /* เพิ่มสีส้มสำหรับเบิกล่วงหน้า */
       --success: #81c784;
       --glass: rgba(255, 255, 255, 0.1);
     }
@@ -58,6 +59,7 @@
     .btn-secondary { background: rgba(255,255,255,0.2); color: white; }
 
     .late-tag { color: var(--danger); font-size: 12px; display: block; }
+    .advance-tag { color: var(--warning); font-size: 12px; display: block; }
     .salary-tag { color: var(--success); font-weight: 600; }
 
     #loading {
@@ -93,6 +95,7 @@
       <div class="info-card"><small>พนักงานทั้งหมด</small><strong id="stat-staff">0</strong> คน</div>
       <div class="info-card"><small>ยอดจ่ายสัปดาห์นี้</small><strong id="stat-total">0.00</strong> ฿</div>
       <div class="info-card"><small>โดนหักมาสายรวม</small><strong id="stat-late" style="color:var(--danger)">0</strong> ฿</div>
+      <div class="info-card"><small>เบิกล่วงหน้ารวม</small><strong id="stat-advance" style="color:var(--warning)">0</strong> ฿</div>
     </div>
 
     <div class="nav-tabs">
@@ -111,6 +114,7 @@
               <th>มาทำงาน</th>
               <th>สายรวม (นาที)</th>
               <th>หักสาย (฿)</th>
+              <th>เบิกล่วงหน้า (฿)</th>
               <th>ยอดสุทธิ (฿)</th>
             </tr>
           </thead>
@@ -144,10 +148,12 @@
               <th>การจ้าง</th>
               <th>อัตราจ้าง</th>
               <th>เวลาเข้างาน</th>
+              <th>เบิกล่วงหน้า (ติดหนี้)</th>
             </tr>
           </thead>
           <tbody id="settings-body"></tbody>
         </table>
+        <p style="font-size: 12px; opacity: 0.7; margin-top: 15px;">* หากต้องการล้างยอดเบิกล่วงหน้า ให้ไปแก้ไขตัวเลขในช่อง 'Advance' ใน Google Sheets ให้เป็น 0 หรือปล่อยว่างไว้</p>
       </div>
     </div>
   </div>
@@ -203,6 +209,10 @@
         <td>${s.empType}</td>
         <td>${s.rate} ฿</td>
         <td>${s.startTime || '-'}</td>
+        <td style="color:var(--warning)">
+          ${s.advance || 0} ฿
+          <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; margin-left: 10px;" onclick="promptUpdateAdvance('${s.name}', ${s.advance || 0})">✎ แก้ไข</button>
+        </td>
       </tr>
     `).join('');
     document.getElementById('stat-staff').innerText = masterData.settings.length;
@@ -219,12 +229,11 @@
     `).join('');
   }
 
-  // ฟังก์ชันใหม่: ล้างชื่อให้สะอาดที่สุด ลบเว้นวรรคเกิน และอักขระซ่อนเร้น
   function standardizeName(name) {
     return String(name || "")
         .replace(/\(Manual\)/gi, '')
-        .replace(/[\u200B-\u200D\uFEFF]/g, '') // ลบอักขระซ่อนเร้นที่มาจาก Excel/Sheets
-        .replace(/\s+/g, ' ') // ปรับเว้นวรรคหลายช่องให้เหลือ 1 ช่อง
+        .replace(/[\u200B-\u200D\uFEFF]/g, '') 
+        .replace(/\s+/g, ' ') 
         .trim();
   }
 
@@ -244,14 +253,14 @@
 
     const summary = {};
     masterData.settings.forEach(s => {
-      // แก้บั๊กที่ 2: ใช้ include เช็กประเภท และใช้ standardizeName ล้างชื่อให้สะอาด
       const cleanName = standardizeName(s.name);
       const isDaily = String(s.empType || "").includes("รายวัน");
       const cleanType = isDaily ? "รายวัน" : "รายชั่วโมง";
       const rateNum = parseFloat(s.rate) || 0;
+      const advanceNum = parseFloat(s.advance) || 0; // ดึงยอดเบิกล่วงหน้า
       
       summary[cleanName] = { 
-        config: { ...s, empType: cleanType, name: cleanName, rate: rateNum }, 
+        config: { ...s, empType: cleanType, name: cleanName, rate: rateNum, advance: advanceNum }, 
         daysWorked: new Set(), 
         totalHours: 0, 
         totalLateMinutes: 0 
@@ -273,7 +282,6 @@
       
       const cleanLogName = standardizeName(l.name);
       
-      // ฟอร์แมตวันที่แบบปลอดภัยที่สุด ป้องกัน Safari รวน
       const year = lDate.getFullYear();
       const month = String(lDate.getMonth() + 1).padStart(2, '0');
       const day = String(lDate.getDate()).padStart(2, '0');
@@ -305,7 +313,6 @@
       if (dayData.in) {
         summary[name].daysWorked.add(dateStr);
         
-        // แก้บั๊กที่ 1: เปลี่ยน 06.00 (จุด) ให้เป็น 06:00 (โคลอน) อัตโนมัติ
         if (config.startTime) {
           let startTimeStr = String(config.startTime).trim().replace('.', ':');
           
@@ -334,6 +341,7 @@
 
     let totalPay = 0;
     let totalLatePay = 0;
+    let totalAdvancePay = 0;
     const tbody = document.getElementById('payroll-body');
     
     tbody.innerHTML = Object.values(summary).map(s => {
@@ -341,15 +349,18 @@
       if (s.config.empType === "รายวัน") {
         grossPay = s.daysWorked.size * s.config.rate;
       } else {
-        // สำหรับรายชั่วโมง จะรวมยอดเมื่อกดสแกนออกงานแล้วเท่านั้น
         grossPay = s.totalHours * s.config.rate;
       }
 
-      const latePenalty = s.totalLateMinutes * 1; // หักนาทีละ 1 บาท
-      const netPay = Math.max(0, grossPay - latePenalty);
+      const latePenalty = s.totalLateMinutes * 1; 
+      const advanceDeduction = s.config.advance; // ดึงยอดเบิกล่วงหน้ามาหักลบ
+      
+      // คำนวณยอดสุทธิ (หักสาย และหักเบิกล่วงหน้า)
+      const netPay = Math.max(0, grossPay - latePenalty - advanceDeduction);
 
       totalPay += netPay;
       totalLatePay += latePenalty;
+      totalAdvancePay += advanceDeduction;
 
       return `
         <tr>
@@ -358,6 +369,7 @@
           <td>${s.config.empType === "รายวัน" ? s.daysWorked.size + ' วัน' : s.totalHours.toFixed(1) + ' ชม.'}</td>
           <td class="text-danger">${s.totalLateMinutes} นาที</td>
           <td>-${latePenalty.toLocaleString()} ฿</td>
+          <td style="color:var(--warning)">-${advanceDeduction.toLocaleString()} ฿</td>
           <td class="salary-tag">${netPay.toLocaleString()} ฿</td>
         </tr>
       `;
@@ -365,6 +377,34 @@
 
     document.getElementById('stat-total').innerText = totalPay.toLocaleString(undefined, {minimumFractionDigits: 2});
     document.getElementById('stat-late').innerText = totalLatePay.toLocaleString();
+    document.getElementById('stat-advance').innerText = totalAdvancePay.toLocaleString();
+  }
+
+  // --- ฟังก์ชันใหม่: กรอกยอดเบิกล่วงหน้าผ่านเว็บ ---
+  function promptUpdateAdvance(name, currentAdvance) {
+    const amountStr = prompt(`ระบุยอดเบิกล่วงหน้า (ติดหนี้) สำหรับคุณ ${name}:\n*ใส่ 0 เพื่อล้างยอดเบิกคืนเป็นปกติ`, currentAdvance);
+    if (amountStr === null) return; // ถ้ายกเลิก
+    
+    const amount = parseFloat(amountStr) || 0;
+    document.getElementById('loading').style.display = 'flex';
+
+    fetch(WEB_APP_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'updateAdvance', name: name, advance: amount })
+    })
+    .then(() => {
+      // อัปเดตข้อมูลบนหน้าจอทันทีโดยไม่ต้องรีเฟรช
+      const emp = masterData.settings.find(s => s.name === name);
+      if(emp) emp.advance = amount;
+      
+      renderSettings();
+      calculatePayroll();
+      document.getElementById('loading').style.display = 'none';
+    })
+    .catch(err => {
+      alert("เกิดข้อผิดพลาดในการบันทึกยอด: " + err.message);
+      document.getElementById('loading').style.display = 'none';
+    });
   }
 </script>
 
