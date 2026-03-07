@@ -7,7 +7,6 @@
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
-    /* ตั้งค่าพื้นหลังโทนสีน้ำตาล-กาแฟ */
     body { 
       font-family: 'Sarabun', sans-serif; 
       margin: 0; 
@@ -63,18 +62,34 @@
     #time { font-size: 48px; font-weight: 600; letter-spacing: 1px; text-shadow: 2px 2px 4px rgba(0,0,0,0.4); margin: 0; line-height: 1; }
     #date { font-size: 16px; color: rgba(255,255,255,0.8); margin-top: 5px; font-weight: 300; }
 
+    .video-container {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto 15px auto;
+    }
+
     video { 
       width: 100%; 
-      max-width: 400px; 
-      max-height: 35vh;
-      object-fit: cover;
       border-radius: 16px; 
       background: rgba(0,0,0,0.5); 
       transform: scaleX(-1); 
       display: none; 
-      margin: 0 auto 15px auto; 
       border: 2px solid rgba(255, 255, 255, 0.3);
       box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+
+    #countdown-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 80px;
+      font-weight: 600;
+      color: #81c784;
+      text-shadow: 0 0 20px rgba(0,0,0,0.8);
+      display: none;
+      z-index: 10;
     }
 
     #status { 
@@ -173,7 +188,11 @@
       <p id="date">วัน เดือน ปี</p>
     </div>
     
-    <video id="video" autoplay muted playsinline></video>
+    <div class="video-container">
+      <video id="video" autoplay muted playsinline></video>
+      <div id="countdown-overlay">3</div>
+    </div>
+
     <div id="status">กำลังโหลดระบบ...</div>
 
     <!-- Multi-angle dots -->
@@ -189,11 +208,8 @@
     <div id="register-ui">
       <input type="text" id="reg-name" placeholder="ระบุชื่อพนักงาน หรือ รหัส" class="input-field">
       <div class="btn-container" id="reg-btns">
-        <button class="btn btn-in" style="width: 100%;" onclick="startMultiAngleReg()">เริ่มแสกนใบหน้า (5 มุม)</button>
+        <button class="btn btn-in" style="width: 100%;" onclick="startAutoMultiAngleReg()">เริ่มบันทึกใบหน้าอัตโนมัติ (5 มุม)</button>
         <button class="btn btn-admin" style="width: 100%; background: rgba(121, 85, 72, 0.9); margin-top: 10px;" onclick="registerIdOnly()">ลงทะเบียนเฉพาะรหัส (Manual)</button>
-      </div>
-      <div id="capture-ui" style="display:none;">
-        <button id="cap-btn" class="btn btn-in" style="width: 100%;" onclick="captureNextAngle()">บันทึกมุมที่ 1 (หน้าตรง)</button>
       </div>
     </div>
 
@@ -220,22 +236,21 @@
     let scanInterval = null;
     let isProcessing = false;
 
-    // สำหรับลงทะเบียน 5 มุม
+    // สำหรับลงทะเบียน 5 มุม แบบ Auto
     let regStep = 0;
     let regDescriptors = [];
+    let isAutoCapturing = false;
     const regInstructions = [
-      "บันทึกมุมที่ 1 (หน้าตรง)",
-      "บันทึกมุมที่ 2 (เอียงซ้าย)",
-      "บันทึกมุมที่ 3 (เอียงขวา)",
-      "บันทึกมุมที่ 4 (เงยหน้าขึ้น)",
-      "บันทึกมุมที่ 5 (ก้มหน้าลง)"
+      "กรุณามองตรง (อยู่นิ่งๆ)",
+      "กรุณาเอียงหน้าไปทางซ้าย",
+      "กรุณาเอียงหน้าไปทางขวา",
+      "กรุณาเงยหน้าขึ้นเล็กน้อย",
+      "กรุณาก้มหน้าลงเล็กน้อย"
     ];
 
-    // โหลดระบบเมื่อเปิดหน้าเว็บ
     window.onload = async () => {
       updateClock();
       setInterval(updateClock, 1000);
-      
       try {
         const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
         await Promise.all([
@@ -260,10 +275,7 @@
         });
         const resData = await response.json();
         knownFaces = resData.map(u => ({ name: u.label, descriptor: new Float32Array(u.descriptor) }));
-        console.log("Database updated:", knownFaces.length, "employees found.");
-      } catch (e) {
-        console.error("Fetch DB Error:", e);
-      }
+      } catch (e) { console.error("Fetch DB Error:", e); }
     }
 
     function updateClock() {
@@ -279,7 +291,7 @@
       if (!empId) return;
       const mode = confirm("ตกลง = เข้างาน / ยกเลิก = ออกงาน");
       const typeLabel = mode ? "เข้างาน" : "ออกงาน";
-      status.innerText = `กำลังบันทึกข้อมูลสำหรับ ${empId}...`;
+      document.getElementById('status').innerText = `กำลังบันทึกข้อมูลสำหรับ ${empId}...`;
       fetch(WEB_APP_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -291,37 +303,28 @@
     }
 
     async function startSystem(mode) {
-      if (!modelsLoaded) { alert("ระบบกำลังโหลด Model... กรุณารอสักครู่"); return; }
+      if (!modelsLoaded) { alert("ระบบกำลังโหลด... กรุณารอสักครู่"); return; }
       try {
         currentMode = mode;
-        menuButtons.style.display = 'none';
-        registerUI.style.display = 'none';
-        btnCancel.style.display = 'inline-block';
-        video.style.display = 'block';
-        status.innerText = "กำลังเปิดกล้อง...";
-
-        const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
-        video.srcObject = stream;
-        
-        // โหลดข้อมูลล่าสุดจากแผ่นงานก่อนแสกน เพื่อความแม่นยำ
-        status.innerText = "กำลังตรวจสอบความพร้อมข้อมูลล่าสุด...";
+        document.getElementById('menu-buttons').style.display = 'none';
+        document.getElementById('register-ui').style.display = 'none';
+        document.getElementById('btn-cancel').style.display = 'inline-block';
+        document.getElementById('video').style.display = 'block';
+        document.getElementById('status').innerText = "กำลังตรวจสอบฐานข้อมูล...";
         await fetchDatabase();
-
-        status.innerText = `พร้อมสแกน! กรุณามองกล้องเพื่อ${mode}`;
-        status.style.color = "#a5d6a7"; 
+        document.getElementById('status').innerText = `พร้อมสแกน! กรุณามองกล้องเพื่อ${mode}`;
+        document.getElementById('status').style.color = "#a5d6a7"; 
         isProcessing = false;
         startScanning();
-      } catch (err) {
-        alert("ไม่สามารถเปิดกล้องได้");
-        resetSystem();
-      }
+      } catch (err) { alert("ไม่สามารถเปิดกล้องได้"); resetSystem(); }
     }
 
     function startScanning() {
       if(scanInterval) clearInterval(scanInterval);
+      const videoEl = document.getElementById('video');
       scanInterval = setInterval(async () => {
         if (isProcessing) return; 
-        const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+        const detection = await faceapi.detectSingleFace(videoEl).withFaceLandmarks().withFaceDescriptor();
         if (detection) {
           let bestMatch = { name: "unknown", distance: 1.0 };
           knownFaces.forEach(u => {
@@ -329,22 +332,20 @@
             if (dist < bestMatch.distance) bestMatch = { name: u.name, distance: dist };
           });
           
-          // ปรับความแม่นยำ (Threshold) เป็น 0.55 เพื่อให้ใช้งานง่ายขึ้น
           if (bestMatch.distance < 0.55) {
             isProcessing = true; 
             clearInterval(scanInterval);
             saveAttendance(bestMatch.name);
           } else {
-            // แสดงระยะห่างเพื่อให้ Admin ทราบว่าใกล้เคียงแค่ไหน
-            status.innerText = `ไม่พบในระบบ (Distance: ${bestMatch.distance.toFixed(2)})`;
-            status.style.color = "#ffcc80"; 
+            document.getElementById('status').innerText = `ไม่พบข้อมูล (Distance: ${bestMatch.distance.toFixed(2)})`;
+            document.getElementById('status').style.color = "#ffcc80"; 
           }
         }
-      }, 800);
+      }, 700);
     }
 
     function saveAttendance(empName) {
-      status.innerText = `พบคุณ ${empName} | กำลังบันทึก...`;
+      document.getElementById('status').innerText = `พบคุณ ${empName} | กำลังบันทึก...`;
       fetch(WEB_APP_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -357,66 +358,91 @@
 
     function checkAdmin() {
       const pass = prompt("กรุณาใส่รหัสผ่าน Admin:");
-      if (pass === ADMIN_PASSWORD) startAdminMenu();
-      else if (pass !== null) alert("รหัสผ่านไม่ถูกต้อง!");
+      if (pass === ADMIN_PASSWORD) {
+        document.getElementById('menu-buttons').style.display = 'none';
+        document.getElementById('btn-cancel').style.display = 'inline-block';
+        document.getElementById('register-ui').style.display = 'block';
+        document.getElementById('video').style.display = 'none'; 
+        document.getElementById('status').innerText = "โหมด Admin: ระบุชื่อพนักงาน";
+      } else if (pass !== null) alert("รหัสผ่านไม่ถูกต้อง!");
     }
 
-    function startAdminMenu() {
-      menuButtons.style.display = 'none';
-      btnCancel.style.display = 'inline-block';
-      registerUI.style.display = 'block';
-      video.style.display = 'none'; 
-      status.innerText = "โหมด Admin: กรุณาระบุชื่อพนักงาน";
-    }
-
-    async function startMultiAngleReg() {
+    // --- ระบบลงทะเบียนแบบ Auto-Capture ---
+    async function startAutoMultiAngleReg() {
       const nameInput = document.getElementById('reg-name').value.trim();
       if (!nameInput) { alert("กรุณาระบุชื่อพนักงาน"); return; }
       
       regStep = 0;
       regDescriptors = [];
-      regBtns.style.display = 'none';
-      captureUi.style.display = 'block';
-      regProgress.style.display = 'flex';
-      video.style.display = 'block';
+      isAutoCapturing = true;
+      document.getElementById('reg-btns').style.display = 'none';
+      document.getElementById('reg-progress').style.display = 'flex';
+      const videoEl = document.getElementById('video');
+      videoEl.style.display = 'block';
       
       const dots = document.querySelectorAll('.dot');
       dots.forEach(d => d.classList.remove('active'));
 
-      status.innerText = "กำลังเปิดกล้อง...";
+      document.getElementById('status').innerText = "กำลังเปิดกล้อง...";
       const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
-      video.srcObject = stream;
+      videoEl.srcObject = stream;
       
-      status.innerText = "พร้อมแล้ว! กรุณามองตรงแล้วกดบันทึก";
-      capBtn.innerText = regInstructions[0];
+      autoCaptureLoop();
     }
 
-    async function captureNextAngle() {
-      status.innerText = "กำลังตรวจจับใบหน้า...";
-      const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
-      
-      if (detection) {
-        regDescriptors.push(Array.from(detection.descriptor));
-        const dots = document.querySelectorAll('.dot');
-        dots[regStep].classList.add('active');
+    async function autoCaptureLoop() {
+      if (!isAutoCapturing) return;
+      const videoEl = document.getElementById('video');
+      const statusEl = document.getElementById('status');
+      const overlay = document.getElementById('countdown-overlay');
+
+      statusEl.innerText = regInstructions[regStep];
+      statusEl.style.color = "#ffffff";
+
+      // รอจนกว่าจะเจอใบหน้า
+      let detection = null;
+      while (!detection && isAutoCapturing) {
+        detection = await faceapi.detectSingleFace(videoEl).withFaceLandmarks().withFaceDescriptor();
+        if (!detection) await new Promise(r => setTimeout(r, 200));
+      }
+
+      if (!isAutoCapturing) return;
+
+      // เมื่อเจอใบหน้าแล้ว นับถอยหลัง 3 2 1
+      overlay.style.display = 'block';
+      for (let i = 3; i > 0; i--) {
+        overlay.innerText = i;
+        await new Promise(r => setTimeout(r, 800));
+        if (!isAutoCapturing) return;
+      }
+      overlay.style.display = 'none';
+
+      // บันทึกภาพในจังหวะนั้น
+      const finalDetection = await faceapi.detectSingleFace(videoEl).withFaceLandmarks().withFaceDescriptor();
+      if (finalDetection) {
+        regDescriptors.push(Array.from(finalDetection.descriptor));
+        document.querySelectorAll('.dot')[regStep].classList.add('active');
         regStep++;
 
         if (regStep < 5) {
-          status.innerText = "สำเร็จ! ต่อไปกรุณา " + regInstructions[regStep].replace("บันทึก", "");
-          capBtn.innerText = regInstructions[regStep];
+          // ไปมุมต่อไป
+          setTimeout(autoCaptureLoop, 1000);
         } else {
+          // ครบถ้วน
           finalizeRegistration();
         }
       } else {
-        alert("ไม่พบใบหน้า กรุณาปรับตำแหน่งใบหน้าให้ชัดเจน");
-        status.innerText = "กรุณาลองใหม่อีกครั้ง";
+        statusEl.innerText = "แสกนไม่ติด! กรุณานิ่งๆ และลองใหม่อีกครั้ง";
+        setTimeout(autoCaptureLoop, 1500);
       }
     }
 
     function finalizeRegistration() {
+      isAutoCapturing = false;
       const nameInput = document.getElementById('reg-name').value.trim();
-      status.innerText = "ครบถ้วน! กำลังบันทึกข้อมูลและอัปเดตระบบ...";
+      document.getElementById('status').innerText = "ครบ 5 มุม! กำลังประมวลผลข้อมูลแม่นยำสูง...";
       
+      // หาค่าเฉลี่ย
       const averagedDescriptor = regDescriptors[0].map((_, i) => 
         regDescriptors.reduce((sum, d) => sum + d[i], 0) / regDescriptors.length
       );
@@ -426,45 +452,41 @@
         mode: 'no-cors',
         body: JSON.stringify({ action: 'register', name: nameInput, descriptor: averagedDescriptor })
       }).then(() => {
-        // อัปเดตข้อมูลพนักงานทันทีหลังจากบันทึก
         setTimeout(async () => {
           await fetchDatabase();
-          alert(`ลงทะเบียนคุณ: "${nameInput}" สำเร็จ! พร้อมใช้งานทันที`);
+          alert(`ลงทะเบียนพนักงาน: "${nameInput}" สำเร็จ! ระบบได้เรียนรู้ใบหน้าคุณอย่างแม่นยำแล้ว`);
           resetSystem();
-        }, 1500); // รอจังหวะ Google Script เขียนไฟล์เล็กน้อย
+        }, 1500);
       });
     }
 
     function registerIdOnly() {
       const nameInput = document.getElementById('reg-name').value.trim();
       if (!nameInput) { alert("กรุณาระบุรหัสพนักงาน"); return; }
-      status.innerText = `กำลังบันทึกรหัสพนักงาน ${nameInput}...`;
       fetch(WEB_APP_URL, {
         method: 'POST',
         mode: 'no-cors',
         body: JSON.stringify({ action: 'register', name: nameInput + " (Manual)", descriptor: [] })
       }).then(() => {
-        setTimeout(async () => {
-          await fetchDatabase();
-          alert(`ลงทะเบียนรหัสพนักงานสำเร็จ!`);
-          resetSystem();
-        }, 1000);
+        setTimeout(async () => { await fetchDatabase(); alert(`ลงทะเบียนรหัสสำเร็จ!`); resetSystem(); }, 1000);
       });
     }
 
     function resetSystem() {
+      isAutoCapturing = false;
       if(scanInterval) clearInterval(scanInterval);
-      if(video.srcObject) video.srcObject.getTracks().forEach(track => track.stop()); 
-      video.style.display = 'none';
-      registerUI.style.display = 'none';
-      captureUi.style.display = 'none';
-      regProgress.style.display = 'none';
-      regBtns.style.display = 'block';
-      menuButtons.style.display = 'flex';
-      btnCancel.style.display = 'none';
+      const videoEl = document.getElementById('video');
+      if(videoEl.srcObject) videoEl.srcObject.getTracks().forEach(track => track.stop()); 
+      videoEl.style.display = 'none';
+      document.getElementById('countdown-overlay').style.display = 'none';
+      document.getElementById('register-ui').style.display = 'none';
+      document.getElementById('reg-progress').style.display = 'none';
+      document.getElementById('reg-btns').style.display = 'block';
+      document.getElementById('menu-buttons').style.display = 'flex';
+      document.getElementById('btn-cancel').style.display = 'none';
       document.getElementById('reg-name').value = ''; 
-      status.innerText = "กรุณาเลือกทำรายการ";
-      status.style.color = "#ffffff";
+      document.getElementById('status').innerText = "กรุณาเลือกทำรายการ";
+      document.getElementById('status').style.color = "#ffffff";
       isProcessing = false;
     }
   </script>
