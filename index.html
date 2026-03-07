@@ -90,13 +90,13 @@
       border: 1px solid rgba(255,255,255,0.1);
     }
 
-    /* --- ปุ่มกดสไตล์ Minimal Matte (เอฟเฟกต์ยกตัว 3 มิติ) --- */
+    /* --- ปุ่มกดสไตล์ Minimal Matte --- */
     .btn-container { display: flex; flex-direction: column; gap: 15px; width: 100%; }
     .btn-row { display: flex; gap: 15px; width: 100%; justify-content: center; }
     
     .btn { 
       position: relative;
-      border: 1px solid rgba(255, 255, 255, 0.15); /* ขอบบางๆ เรียบง่าย */
+      border: 1px solid rgba(255, 255, 255, 0.15); 
       border-radius: 16px; 
       font-size: 22px; 
       font-weight: 600; 
@@ -105,12 +105,11 @@
       flex: 1; 
       min-width: 150px; 
       padding: 20px;
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* แอนิเมชันนุ่มนวล */
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
       box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
       font-family: 'Sarabun', sans-serif;
     }
 
-    /* เอฟเฟกต์ยกตัวขึ้น (Lift Effect) เวลานำเมาส์ไปชี้ */
     .btn:hover {
       transform: translateY(-4px);
       box-shadow: 0 12px 20px rgba(0,0,0,0.25);
@@ -120,19 +119,16 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
     }
     
-    /* ปุ่มเข้างาน (สีเขียวแบบ Matte) */
     .btn-in { background: rgba(40, 167, 69, 0.85); }
-    .btn-in:hover { background: rgba(40, 167, 69, 1); border-color: rgba(255,255,255,0.4); }
-    
-    /* ปุ่มออกงาน (สีแดงแบบ Matte) */
     .btn-out { background: rgba(220, 53, 69, 0.85); }
-    .btn-out:hover { background: rgba(220, 53, 69, 1); border-color: rgba(255,255,255,0.4); }
     
-    /* ปุ่มแอดมิน (สีดำแบบ Matte) */
-    .btn-admin { background: rgba(30, 30, 30, 0.85); width: 100%; font-size: 18px; padding: 15px; }
-    .btn-admin:hover { background: rgba(0, 0, 0, 1); border-color: rgba(255,255,255,0.4); }
+    /* ปุ่มสำรอง (สีน้ำตาลอ่อน) */
+    .btn-manual { background: rgba(141, 110, 99, 0.85); width: 100%; font-size: 18px; padding: 15px; }
 
-    /* ปุ่มยกเลิก (เทาใสแบบ Matte) */
+    /* ปุ่มแอดมิน (สีดำ) */
+    .btn-admin { background: rgba(30, 30, 30, 0.85); width: 100%; font-size: 18px; padding: 15px; }
+
+    /* ปุ่มยกเลิก */
     .btn-cancel { 
       background: rgba(255, 255, 255, 0.15); 
       margin-top: 15px; 
@@ -142,9 +138,8 @@
       display: none; 
       backdrop-filter: blur(10px);
     }
-    .btn-cancel:hover { background: rgba(255, 255, 255, 0.25); border-color: rgba(255,255,255,0.4); }
 
-    /* ฟอร์มลงทะเบียนสไตล์กระจก */
+    /* ฟอร์มลงทะเบียน */
     #register-ui { display: none; width: 100%; }
     .input-field {
       width: 85%;
@@ -159,63 +154,43 @@
       font-family: 'Sarabun', sans-serif;
       text-align: center;
       outline: none;
-      box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
-      transition: all 0.3s ease;
     }
-    .input-field:focus {
-      background: rgba(255,255,255,0.2);
-      border-color: rgba(255,255,255,0.8);
-      box-shadow: 0 0 15px rgba(255,255,255,0.3), inset 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .input-field::placeholder { color: rgba(255,255,255,0.6); }
-
-    /* ปรับแต่ง Scrollbar */
-    ::-webkit-scrollbar { width: 0px; }
   </style>
 </head>
 <body>
 
   <div class="glass-card">
-    <!-- โลโก้ร้าน -->
     <img src="indexlogo.png" alt="Thonwithi Logo" class="brand-logo" onerror="this.style.display='none';">
 
-    <!-- ส่วนนาฬิกา -->
     <div class="clock-container">
       <p id="time">00:00:00</p>
       <p id="date">วัน เดือน ปี</p>
     </div>
     
-    <!-- วิดีโอแสกน -->
     <video id="video" autoplay muted playsinline></video>
-    
-    <!-- ข้อความสถานะ -->
     <div id="status">กรุณาเลือกทำรายการ</div>
 
-    <!-- ส่วนลงทะเบียนพนักงาน (สำหรับ Admin เท่านั้น) -->
     <div id="register-ui">
       <input type="text" id="reg-name" placeholder="ระบุชื่อพนักงาน" class="input-field">
       <button class="btn btn-in" style="width: 100%; margin-bottom: 10px;" onclick="captureAndRegister()">บันทึกใบหน้า</button>
     </div>
 
-    <!-- ปุ่มเลือก เข้า/ออก/ลงทะเบียน (จัดระเบียบใหม่) -->
     <div class="btn-container" id="menu-buttons">
       <div class="btn-row">
         <button class="btn btn-in" onclick="startSystem('เข้างาน')">สแกนเข้างาน</button>
         <button class="btn btn-out" onclick="startSystem('ออกงาน')">สแกนออกงาน</button>
       </div>
+      <button class="btn btn-manual" onclick="manualLog()">ลงเวลาด้วยรหัสพนักงาน</button>
       <button class="btn btn-admin" onclick="checkAdmin()">ลงทะเบียนพนักงาน (Admin)</button>
     </div>
 
-    <!-- ปุ่มยกเลิก -->
     <button id="btn-cancel" class="btn btn-cancel" onclick="resetSystem()">ย้อนกลับไปหน้าแรก</button>
   </div>
 
   <script>
-    // === ตั้งค่ารหัสผ่าน Admin ตรงนี้ ===
     const ADMIN_PASSWORD = "123"; 
-    // ================================
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwBd8OsZFF2i44KrfCnGI7c9idmDakwWEgse9qt_WDOD5OOxG13eRaXf16SavEnP2oZ/exec"; 
 
-    // การทำงานของนาฬิกา
     function updateClock() {
       const now = new Date();
       const optionsTime = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
@@ -225,9 +200,6 @@
     }
     setInterval(updateClock, 1000);
     updateClock();
-
-    // URL Web App ของ Google Script
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwBd8OsZFF2i44KrfCnGI7c9idmDakwWEgse9qt_WDOD5OOxG13eRaXf16SavEnP2oZ/exec"; 
 
     const video = document.getElementById('video');
     const status = document.getElementById('status');
@@ -240,7 +212,28 @@
     let scanInterval = null;
     let isProcessing = false;
 
-    // --- ฟังก์ชัน 1: โหมดสแกนเข้า-ออกงาน ---
+    // --- ลงเวลาสำรองด้วยรหัสพนักงาน ---
+    function manualLog() {
+      const empId = prompt("กรุณาระบุรหัสพนักงาน (เช่น A1001):");
+      if (!empId) return;
+
+      const mode = confirm("ตกลง = เข้างาน / ยกเลิก = ออกงาน");
+      const type = mode ? "เข้างาน" : "ออกงาน";
+
+      status.innerText = `กำลังบันทึกข้อมูลสำหรับ ${empId}...`;
+      
+      fetch(WEB_APP_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({ action: 'log', name: empId + " (Manual)", type: type, lat: "-", lng: "-" })
+      }).then(() => {
+        alert(`บันทึก ${type} สำหรับรหัส ${empId} สำเร็จ!`);
+        resetSystem();
+      }).catch(err => {
+        alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+      });
+    }
+
     async function startSystem(mode) {
       try {
         currentMode = mode;
@@ -249,7 +242,6 @@
         btnCancel.style.display = 'inline-block';
         video.style.display = 'block';
         status.innerText = `กำลังเตรียมกล้องสำหรับ "${mode}"...`;
-        status.style.color = "#ffffff";
 
         const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
         video.srcObject = stream;
@@ -276,9 +268,8 @@
         startScanning();
 
       } catch (err) {
-        alert("ไม่สามารถเปิดกล้องได้ โปรดตรวจสอบการอนุญาตใช้งานกล้อง");
-        status.innerText = "ผิดพลาด: ไม่สามารถเปิดกล้องได้";
-        status.style.color = "#ef9a9a"; 
+        alert("ไม่สามารถเปิดกล้องได้");
+        resetSystem();
       }
     }
 
@@ -317,15 +308,14 @@
         mode: 'no-cors',
         body: JSON.stringify({ action: 'log', name: empName, type: currentMode, lat: "-", lng: "-" })
       }).then(() => {
-        alert(`บันทึกเวลา${currentMode}\nชื่อพนักงาน: ${empName}\nทำรายการสำเร็จ!`);
+        alert(`บันทึกเวลา${currentMode} สำเร็จ!`);
         resetSystem();
       }).catch(err => {
-        alert("ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่");
+        alert("ส่งข้อมูลไม่สำเร็จ");
         resetSystem();
       });
     }
 
-    // --- ฟังก์ชัน 2: โหมดลงทะเบียนพนักงาน (Admin) ---
     function checkAdmin() {
       const pass = prompt("กรุณาใส่รหัสผ่านเพื่อเข้าสู่โหมด Admin:");
       if (pass === ADMIN_PASSWORD) {
@@ -343,12 +333,9 @@
         registerUI.style.display = 'block';
         video.style.display = 'block';
         status.innerText = "กำลังเตรียมกล้องสำหรับลงทะเบียน...";
-        status.style.color = "#ffffff";
 
         const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
         video.srcObject = stream;
-        
-        status.innerText = "กำลังโหลด AI Model...";
         
         const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
         await Promise.all([
@@ -368,57 +355,34 @@
     async function captureAndRegister() {
       const nameInput = document.getElementById('reg-name').value.trim();
       if (!nameInput) {
-        alert("กรุณาระบุชื่อพนักงานก่อนบันทึกใบหน้า");
+        alert("กรุณาระบุชื่อพนักงาน");
         return;
       }
 
-      status.innerText = "กำลังตรวจจับใบหน้า...";
-      status.style.color = "#ffffff";
-
-      // ทำการตรวจจับใบหน้าแบบครั้งเดียว
       const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
-
       if (detection) {
-        status.innerText = "พบใบหน้า กำลังส่งข้อมูลไปที่ Google Sheets...";
-        status.style.color = "#81c784";
-        
         const descriptorArray = Array.from(detection.descriptor);
-
         fetch(WEB_APP_URL, {
           method: 'POST',
           mode: 'no-cors',
-          body: JSON.stringify({ 
-            action: 'register', 
-            name: nameInput, 
-            descriptor: descriptorArray 
-          })
+          body: JSON.stringify({ action: 'register', name: nameInput, descriptor: descriptorArray })
         }).then(() => {
-          alert(`ลงทะเบียนพนักงาน: "${nameInput}" สำเร็จเรียบร้อย!`);
-          document.getElementById('reg-name').value = ''; // ล้างชื่อออก
-          // วนกลับไปหน้าแสกนเข้า-ออกงานได้เลย หรือจะรอลงคนต่อไปก็ได้
-        }).catch(err => {
-          alert("บันทึกไม่สำเร็จ กรุณาลองใหม่");
-          status.innerText = "ข้อผิดพลาดในการเชื่อมต่อ";
+          alert(`ลงทะเบียนพนักงาน: "${nameInput}" สำเร็จ!`);
+          resetSystem();
         });
-
       } else {
-        alert("ตรวจไม่พบใบหน้า กรุณามองกล้องให้ชัดเจน ไม่มีสิ่งบดบัง");
-        status.innerText = "ไม่พบใบหน้า กรุณาลองใหม่";
-        status.style.color = "#ffcc80";
+        alert("ตรวจไม่พบใบหน้า");
       }
     }
 
-    // --- ฟังก์ชันยกเลิก / รีเซ็ตหน้าจอ ---
     function resetSystem() {
       if(scanInterval) clearInterval(scanInterval);
       if(video.srcObject) video.srcObject.getTracks().forEach(track => track.stop()); 
-      
       video.style.display = 'none';
       registerUI.style.display = 'none';
       menuButtons.style.display = 'flex';
       btnCancel.style.display = 'none';
-      document.getElementById('reg-name').value = ''; // ล้างช่องกรอกชื่อ
-      
+      document.getElementById('reg-name').value = ''; 
       status.innerText = "กรุณาเลือกทำรายการ";
       status.style.color = "#ffffff";
       isProcessing = false;
