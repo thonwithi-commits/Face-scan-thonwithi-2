@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thonwithi Payroll - ระบบจัดการเงินเดือน</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #8d6e63;
+      --accent: #ffc107;
+      --danger: #ff5252;
+      --success: #81c784;
+      --glass: rgba(255, 255, 255, 0.1);
+    }
+    body { 
+      font-family: 'Sarabun', sans-serif; 
+      margin: 0; padding: 0;
+      background: linear-gradient(135deg, #2b1b17 0%, #3e2723 100%);
+      color: white; min-height: 100vh;
+    }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    
+    /* Login Section */
+    #login-screen { display: flex; align-items: center; justify-content: center; height: 80vh; }
+    .glass-box {
+      background: var(--glass); backdrop-filter: blur(15px);
+      border: 1px solid rgba(255,255,255,0.2); border-radius: 24px;
+      padding: 40px; width: 100%; max-width: 350px; text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    #admin-content { display: none; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    
+    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+    .tab {
+      padding: 12px 20px; background: rgba(255,255,255,0.1); border-radius: 12px;
+      cursor: pointer; transition: 0.3s; white-space: nowrap; font-size: 14px;
+    }
+    .tab.active { background: var(--accent); color: #000; font-weight: 600; }
+
+    /* Data Display */
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .info-card { background: var(--glass); border-radius: 16px; padding: 15px; border-left: 4px solid var(--accent); }
+    .info-card small { opacity: 0.6; display: block; margin-bottom: 5px; }
+    .info-card strong { font-size: 20px; color: var(--accent); }
+
+    .data-card {
+      background: var(--glass); border-radius: 20px; padding: 20px;
+      border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 900px; }
+    th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    th { color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+    
+    .btn { padding: 10px 20px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-primary { background: var(--accent); color: black; }
+    .btn-secondary { background: rgba(255,255,255,0.2); color: white; }
+
+    .late-tag { color: var(--danger); font-size: 12px; display: block; }
+    .salary-tag { color: var(--success); font-weight: 600; }
+
+    /* Loading Overlay */
+    #loading {
+      position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8);
+      display: none; align-items: center; justify-content: center; z-index: 2000;
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading">กำลังประมวลผลข้อมูล...</div>
+
+<div class="container">
+  <!-- หน้าจอ Login -->
+  <div id="login-screen">
+    <div class="glass-box">
+      <h2 style="margin-top:0">ระบบจัดการหลังบ้าน</h2>
+      <p style="opacity:0.7; font-size: 14px">กรุณาใส่รหัสผ่านเพื่อดูรายงานเงินเดือน</p>
+      <input type="password" id="admin-pass" placeholder="รหัสผ่าน Admin" style="width:100%; padding:12px; margin:20px 0; border-radius:10px; border:none; background:rgba(0,0,0,0.2); color:white; box-sizing:border-box; text-align:center;">
+      <button class="btn btn-primary" style="width: 100%" onclick="login()">เข้าสู่ระบบ</button>
+    </div>
+  </div>
+
+  <!-- หน้าจอหลัก Admin -->
+  <div id="admin-content">
+    <div class="header">
+      <div>
+        <h2 style="margin:0">Dashboard รายสัปดาห์</h2>
+        <p id="week-display" style="opacity:0.6; margin:5px 0 0 0; font-size: 14px;"></p>
+      </div>
+      <button class="btn btn-secondary" onclick="location.reload()">Log Out</button>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-card"><small>พนักงานทั้งหมด</small><strong id="stat-staff">0</strong> คน</div>
+      <div class="info-card"><small>ยอดจ่ายสัปดาห์นี้</small><strong id="stat-total">0.00</strong> ฿</div>
+      <div class="info-card"><small>โดนหักมาสายรวม</small><strong id="stat-late" style="color:var(--danger)">0</strong> ฿</div>
+    </div>
+
+    <div class="nav-tabs">
+      <div class="tab active" onclick="switchTab('payroll')">สรุปเงินเดือน (รายวัน/รายชั่วโมง)</div>
+      <div class="tab" onclick="switchTab('logs')">ประวัติแสกนจริง</div>
+      <div class="tab" onclick="switchTab('settings')">ตั้งค่าอัตราจ้าง & เวลาเข้างาน</div>
+    </div>
+
+    <!-- รายงานเงินเดือน -->
+    <div id="payroll-section" class="tab-content">
+      <div class="data-card">
+        <table id="payroll-table">
+          <thead>
+            <tr>
+              <th>พนักงาน</th>
+              <th>ประเภท</th>
+              <th>มาทำงาน</th>
+              <th>สายรวม (นาที)</th>
+              <th>หักสาย (฿)</th>
+              <th>ยอดสุทธิ (฿)</th>
+            </tr>
+          </thead>
+          <tbody id="payroll-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ประวัติแสกน -->
+    <div id="logs-section" class="tab-content" style="display:none">
+      <div class="data-card">
+        <table id="logs-table">
+          <thead>
+            <tr>
+              <th>วัน/เวลา</th>
+              <th>พนักงาน</th>
+              <th>ประเภท</th>
+            </tr>
+          </thead>
+          <tbody id="logs-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ตั้งค่าพนักงาน -->
+    <div id="settings-section" class="tab-content" style="display:none">
+      <div class="data-card">
+        <table id="settings-table">
+          <thead>
+            <tr>
+              <th>ชื่อ</th>
+              <th>แผนก</th>
+              <th>การจ้าง</th>
+              <th>อัตราจ้าง</th>
+              <th>เวลาเข้างาน</th>
+            </tr>
+          </thead>
+          <tbody id="settings-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // URL เว็บแอปจาก Google Script ของคุณ
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwBd8OsZFF2i44KrfCnGI7c9idmDakwWEgse9qt_WDOD5OOxG13eRaXf16SavEnP2oZ/exec"; 
+  const ADMIN_PASS = "123";
+
+  let masterData = { logs: [], settings: [] };
+
+  function login() {
+    if (document.getElementById('admin-pass').value === ADMIN_PASS) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('admin-content').style.display = 'block';
+      loadAllData();
+    } else { alert("รหัสผ่านไม่ถูกต้อง"); }
+  }
+
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId + '-section').style.display = 'block';
+    event.currentTarget.classList.add('active');
+  }
+
+  async function loadAllData() {
+    document.getElementById('loading').style.display = 'flex';
+    try {
+      const [logsRes, settingsRes] = await Promise.all([
+        fetch(WEB_APP_URL, { method: 'POST', body: JSON.stringify({action:'getLogs'}) }),
+        fetch(WEB_APP_URL, { method: 'POST', body: JSON.stringify({action:'getEmployeeSettings'}) })
+      ]);
+      
+      masterData.logs = await logsRes.json();
+      masterData.settings = await settingsRes.json();
+
+      renderSettings();
+      renderLogs();
+      calculatePayroll();
+    } catch (e) {
+      alert("ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบการ Deploy ใน Apps Script (ต้องเป็น Anyone)");
+    }
+    document.getElementById('loading').style.display = 'none';
+  }
+
+  function renderSettings() {
+    const tbody = document.getElementById('settings-body');
+    tbody.innerHTML = masterData.settings.map(s => `
+      <tr>
+        <td>${s.name}</td>
+        <td>${s.dept}</td>
+        <td>${s.empType}</td>
+        <td>${s.rate} ฿</td>
+        <td>${s.startTime} น.</td>
+      </tr>
+    `).join('');
+    document.getElementById('stat-staff').innerText = masterData.settings.length;
+  }
+
+  function renderLogs() {
+    const tbody = document.getElementById('logs-body');
+    tbody.innerHTML = masterData.logs.slice().reverse().slice(0, 50).map(l => `
+      <tr>
+        <td>${l.timestamp}</td>
+        <td>${l.name}</td>
+        <td>${l.type}</td>
+      </tr>
+    `).join('');
+  }
+
+  function calculatePayroll() {
+    // กำหนดรอบสัปดาห์ อังคาร - จันทร์
+    const now = new Date();
+    const currentDay = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
+    // รอบสัปดาห์เริ่มวันอังคาร (2)
+    const daysSinceTue = (currentDay + 5) % 7;
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - daysSinceTue);
+    startOfWeek.setHours(0,0,0,0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23,59,59,999);
+
+    document.getElementById('week-display').innerText = `รอบสัปดาห์ทำงาน: ${startOfWeek.toLocaleDateString('th-TH')} - ${endOfWeek.toLocaleDateString('th-TH')}`;
+
+    const summary = {};
+    masterData.settings.forEach(s => {
+      summary[s.name] = { 
+        config: s, 
+        daysWorked: new Set(), 
+        totalHours: 0, 
+        totalLateMinutes: 0 
+      };
+    });
+
+    // กรอง Log เฉพาะในรอบสัปดาห์
+    const weeklyLogs = masterData.logs.filter(l => {
+      const lDate = new Date(l.timestamp);
+      return lDate >= startOfWeek && lDate <= endOfWeek;
+    });
+
+    // จัดกลุ่ม Log ตามคนและวัน
+    const dailyGroup = {};
+    weeklyLogs.forEach(l => {
+      const lDate = new Date(l.timestamp);
+      const dayKey = l.name + "_" + lDate.toISOString().split('T')[0];
+      if (!dailyGroup[dayKey]) dailyGroup[dayKey] = { in: null, out: null };
+      
+      if (l.type === 'เข้างาน' && (!dailyGroup[dayKey].in || lDate < dailyGroup[dayKey].in)) dailyGroup[dayKey].in = lDate;
+      if (l.type === 'ออกงาน' && (!dailyGroup[dayKey].out || lDate > dailyGroup[dayKey].out)) dailyGroup[dayKey].out = lDate;
+    });
+
+    // ประมวลผลแต่ละวัน
+    for (const key in dailyGroup) {
+      const [name, dateStr] = key.split('_');
+      if (!summary[name]) continue;
+
+      const dayData = dailyGroup[key];
+      const config = summary[name].config;
+
+      if (dayData.in) {
+        summary[name].daysWorked.add(dateStr);
+        
+        // คำนวณมาสายเทียบกับ StartTime ใน Settings
+        if (config.startTime) {
+          const [targetH, targetM] = config.startTime.split(':');
+          const targetTime = new Date(dayData.in);
+          targetTime.setHours(parseInt(targetH), parseInt(targetM), 0, 0);
+
+          if (dayData.in > targetTime) {
+            const diffMs = dayData.in - targetTime;
+            summary[name].totalLateMinutes += Math.floor(diffMs / 60000);
+          }
+        }
+
+        // คำนวณชั่วโมงงาน (สำหรับพาร์ทไทม์)
+        if (dayData.out && dayData.out > dayData.in) {
+          summary[name].totalHours += (dayData.out - dayData.in) / (1000 * 60 * 60);
+        }
+      }
+    }
+
+    // แสดงผลสรุป
+    let totalPay = 0;
+    let totalLatePay = 0;
+    const tbody = document.getElementById('payroll-body');
+    tbody.innerHTML = Object.values(summary).map(s => {
+      let grossPay = 0;
+      if (s.config.empType === "รายวัน") {
+        grossPay = s.daysWorked.size * (s.config.rate || 0);
+      } else {
+        grossPay = s.totalHours * (s.config.rate || 0);
+      }
+
+      const latePenalty = s.totalLateMinutes * 1; // หักนาทีละ 1 บาท
+      const netPay = Math.max(0, grossPay - latePenalty);
+
+      totalPay += netPay;
+      totalLatePay += latePenalty;
+
+      return `
+        <tr>
+          <td><strong>${s.config.name}</strong><br><small>${s.config.dept}</small></td>
+          <td>${s.config.empType}</td>
+          <td>${s.config.empType === "รายวัน" ? s.daysWorked.size + ' วัน' : s.totalHours.toFixed(1) + ' ชม.'}</td>
+          <td class="text-danger">${s.totalLateMinutes} นาที</td>
+          <td>-${latePenalty.toLocaleString()} ฿</td>
+          <td class="salary-tag">${netPay.toLocaleString()} ฿</td>
+        </tr>
+      `;
+    }).join('');
+
+    document.getElementById('stat-total').innerText = totalPay.toLocaleString(undefined, {minimumFractionDigits: 2});
+    document.getElementById('stat-late').innerText = totalLatePay.toLocaleString();
+  }
+</script>
+
+</body>
+</html>
