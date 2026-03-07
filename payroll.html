@@ -15,6 +15,7 @@
       --success: #81c784;
       --bonus: #00bcd4;
       --glass: rgba(255, 255, 255, 0.1);
+      --glass-dark: rgba(0, 0, 0, 0.6);
     }
     body { 
       font-family: 'Sarabun', sans-serif; 
@@ -42,7 +43,6 @@
     }
     .tab.active { background: var(--accent); color: #000; font-weight: 600; }
 
-    /* ปรับปรุงตารางสรุปด้านบนให้รองรับ 5 กล่อง */
     .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
     .info-card { background: var(--glass); border-radius: 16px; padding: 15px; border-left: 4px solid var(--accent); }
     .info-card small { opacity: 0.6; display: block; margin-bottom: 5px; }
@@ -57,7 +57,7 @@
     th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
     th { color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
     
-    .btn { padding: 10px 20px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn { padding: 10px 20px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; font-family: 'Sarabun', sans-serif; }
     .btn-primary { background: var(--accent); color: black; }
     .btn-secondary { background: rgba(255,255,255,0.2); color: white; }
     .btn-bonus { background: var(--bonus); color: black; }
@@ -66,33 +66,73 @@
     .salary-tag { color: var(--success); font-weight: 600; }
     .bonus-tag { color: var(--bonus); font-weight: 600; }
 
+    /* Custom Modal UI */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: var(--glass-dark); backdrop-filter: blur(8px);
+      display: none; align-items: center; justify-content: center; z-index: 3000;
+      opacity: 0; transition: opacity 0.3s ease;
+    }
+    .modal-overlay.active { display: flex; opacity: 1; }
+    .modal-card {
+      background: rgba(45, 30, 25, 0.95); border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 24px; padding: 30px; width: 90%; max-width: 400px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5); text-align: center;
+      transform: scale(0.8); transition: transform 0.3s ease;
+    }
+    .modal-overlay.active .modal-card { transform: scale(1); }
+    .modal-card h3 { margin-top: 0; color: var(--accent); font-size: 22px; }
+    .modal-card p { opacity: 0.8; line-height: 1.6; margin-bottom: 25px; }
+    .modal-input {
+      width: 100%; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(0,0,0,0.3); color: white; font-size: 18px; text-align: center;
+      margin-bottom: 20px; box-sizing: border-box; outline: none;
+    }
+    .modal-input:focus { border-color: var(--accent); }
+    .modal-btns { display: flex; gap: 10px; justify-content: center; }
+
     #loading {
-      position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8);
-      display: none; align-items: center; justify-content: center; z-index: 2000; flex-direction: column; gap: 10px;
+      position: fixed; top:0; left:0; width:100%; height:100%; background: var(--glass-dark);
+      backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; 
+      z-index: 4000; flex-direction: column; gap: 15px;
     }
 
     /* Template สลิป */
     #slip-render-area { position: absolute; left: -9999px; top: 0; }
     .slip-card {
-      width: 450px; background: #ffffff; color: #333; padding: 30px; 
+      width: 450px; background: #ffffff; color: #333; padding: 40px; 
       font-family: 'Sarabun', sans-serif; border-radius: 0px; box-sizing: border-box;
     }
     .slip-header { text-align: center; border-bottom: 2px dashed #ccc; padding-bottom: 15px; margin-bottom: 15px; }
-    .slip-title { font-size: 24px; font-weight: 600; color: #3e2723; margin: 0; }
+    .slip-title { font-size: 26px; font-weight: 600; color: #3e2723; margin: 0; }
     .slip-subtitle { font-size: 14px; color: #666; margin: 5px 0 0 0; }
-    
-    .slip-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 16px; }
+    .slip-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 16px; }
     .slip-divider { border-bottom: 1px solid #eee; margin: 15px 0; }
-    .slip-total { font-size: 20px; font-weight: 600; color: #2e7d32; display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 2px solid #333; }
+    .slip-total { font-size: 22px; font-weight: 600; color: #2e7d32; display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 2px solid #333; }
     .slip-deduct { color: #d32f2f; }
     .slip-bonus-text { color: #0097a7; font-weight: 600;}
   </style>
 </head>
 <body>
 
+<!-- Custom Modal Box -->
+<div id="modal-overlay" class="modal-overlay">
+  <div class="modal-card">
+    <h3 id="modal-title">หัวข้อ</h3>
+    <p id="modal-msg">ข้อความรายละเอียด</p>
+    <div id="modal-prompt-area" style="display:none">
+      <input type="text" id="modal-input" class="modal-input" placeholder="กรอกข้อมูล...">
+    </div>
+    <div class="modal-btns">
+      <button id="modal-cancel-btn" class="btn btn-secondary" style="display:none">ยกเลิก</button>
+      <button id="modal-ok-btn" class="btn btn-primary" style="min-width: 100px;">ตกลง</button>
+    </div>
+  </div>
+</div>
+
 <div id="loading">
-  <div style="font-size: 24px;">กำลังประมวลผล...</div>
-  <div id="loading-text" style="font-size: 14px; opacity: 0.8;">โปรดรอสักครู่</div>
+  <div style="font-size: 24px; font-weight:600; color:var(--accent);">กำลังประมวลผล</div>
+  <div id="loading-text" style="font-size: 14px; opacity: 0.8;">โปรดรอสักครู่...</div>
 </div>
 
 <div class="container">
@@ -117,7 +157,6 @@
       </div>
     </div>
 
-    <!-- ส่วนสรุปยอดที่แก้ไข ID ให้ตรงกับโค้ด JS -->
     <div class="info-grid">
       <div class="info-card"><small>พนักงานทั้งหมด</small><strong id="stat-staff">0</strong> คน</div>
       <div class="info-card"><small>ยอดจ่ายสัปดาห์นี้</small><strong id="stat-total">0.00</strong> ฿</div>
@@ -188,6 +227,7 @@
   </div>
 </div>
 
+<!-- Template สลิป (PNG) -->
 <div id="slip-render-area">
   <div class="slip-card" id="slip-template">
     <div class="slip-header">
@@ -195,25 +235,20 @@
       <p class="slip-subtitle">ใบแจ้งเงินเดือน / Payslip</p>
       <p class="slip-subtitle" id="slip-date" style="margin-top:5px; font-weight:600;"></p>
     </div>
-    
     <div class="slip-row" style="margin-bottom: 20px;">
       <div><strong>ชื่อพนักงาน:</strong> <span id="slip-name"></span></div>
       <div><strong>แผนก:</strong> <span id="slip-dept"></span></div>
     </div>
-
     <div class="slip-row">
       <span>รายได้จากการทำงาน (<span id="slip-work-unit"></span>)</span>
       <span id="slip-gross">0.00 ฿</span>
     </div>
-    
     <div class="slip-row slip-bonus-text" id="slip-bonus-row">
       <span>โบนัสยอดขาย / พิเศษ</span>
       <span id="slip-bonus-pay">+0.00 ฿</span>
     </div>
-
     <div class="slip-divider"></div>
     <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">รายการหัก (Deductions)</div>
-    
     <div class="slip-row slip-deduct">
       <span>หักมาสาย (<span id="slip-late-min"></span> นาที)</span>
       <span id="slip-late-pay">-0.00 ฿</span>
@@ -222,14 +257,12 @@
       <span>หักเบิกล่วงหน้า</span>
       <span id="slip-advance">-0.00 ฿</span>
     </div>
-
     <div class="slip-total">
       <span>รายรับสุทธิ (Net Pay)</span>
       <span id="slip-net">0.00 ฿</span>
     </div>
-    
-    <div style="text-align: center; margin-top: 30px; font-size: 12px; color: #888;">
-      ขอบคุณที่ตั้งใจทำงาน<br>Thonwithi Management
+    <div style="text-align: center; margin-top: 35px; font-size: 12px; color: #888;">
+      ขอบคุณที่ตั้งใจทำงานอย่างเต็มที่<br>Thonwithi Management
     </div>
   </div>
 </div>
@@ -242,18 +275,64 @@
   let globalSummary = {}; 
   let globalWeekText = "";
 
+  // --- ระบบ Custom Modal Functions ---
+  const showModal = (title, msg, type = 'alert', defaultVal = '') => {
+    return new Promise((resolve) => {
+      const overlay = document.getElementById('modal-overlay');
+      const titleEl = document.getElementById('modal-title');
+      const msgEl = document.getElementById('modal-msg');
+      const inputArea = document.getElementById('modal-prompt-area');
+      const input = document.getElementById('modal-input');
+      const okBtn = document.getElementById('modal-ok-btn');
+      const cancelBtn = document.getElementById('modal-cancel-btn');
+
+      titleEl.innerText = title;
+      msgEl.innerText = msg;
+      overlay.classList.add('active');
+
+      if (type === 'prompt') {
+        inputArea.style.display = 'block';
+        input.value = defaultVal;
+        cancelBtn.style.display = 'block';
+        setTimeout(() => input.focus(), 100);
+      } else if (type === 'confirm') {
+        inputArea.style.display = 'none';
+        cancelBtn.style.display = 'block';
+      } else {
+        inputArea.style.display = 'none';
+        cancelBtn.style.display = 'none';
+      }
+
+      const close = (val) => {
+        overlay.classList.remove('active');
+        okBtn.onclick = null;
+        cancelBtn.onclick = null;
+        resolve(val);
+      };
+
+      okBtn.onclick = () => close(type === 'prompt' ? input.value : true);
+      cancelBtn.onclick = () => close(null);
+    });
+  };
+
+  const alertMsg = (title, msg) => showModal(title, msg, 'alert');
+  const confirmMsg = (title, msg) => showModal(title, msg, 'confirm');
+  const promptMsg = (title, msg, def = '') => showModal(title, msg, 'prompt', def);
+
   function showLoading(text = "กำลังประมวลผลข้อมูล...") {
     document.getElementById('loading-text').innerText = text;
     document.getElementById('loading').style.display = 'flex';
   }
   function hideLoading() { document.getElementById('loading').style.display = 'none'; }
 
-  function login() {
+  async function login() {
     if (document.getElementById('admin-pass').value === ADMIN_PASS) {
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('admin-content').style.display = 'block';
       loadAllData();
-    } else { alert("รหัสผ่านไม่ถูกต้อง"); }
+    } else { 
+      await alertMsg("เข้าสู่ระบบไม่สำเร็จ", "รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่"); 
+    }
   }
 
   function switchTab(tabId) {
@@ -263,7 +342,6 @@
     event.currentTarget.classList.add('active');
   }
 
-  // ฟังก์ชันช่วยเหลือ: ป้องกัน Error "setting innerText of null"
   function safeSetText(id, text) {
     const el = document.getElementById(id);
     if (el) el.innerText = text;
@@ -440,46 +518,55 @@
     safeSetText('stat-bonus', totalBonusPay.toLocaleString());
   }
 
-  function distributeBonusAll() {
+  async function distributeBonusAll() {
     const totalStaff = masterData.settings.length;
-    if (totalStaff === 0) return alert("ไม่มีพนักงานในระบบ");
-    const amountStr = prompt(`ระบุยอดเงิน "รวมทั้งหมด" ที่ต้องการแจกโบนัส:\n(ระบบจะนำไปหารให้พนักงานทั้ง ${totalStaff} คนเท่าๆ กัน)`);
-    if (amountStr === null) return; 
+    if (totalStaff === 0) return await alertMsg("ผิดพลาด", "ไม่มีพนักงานในระบบ");
+    
+    const amountStr = await promptMsg("อัดฉีดโบนัสรวม", `ระบุยอดเงิน "รวมทั้งหมด" ที่ต้องการแจก:\n(ระบบจะหารให้พนักงาน ${totalStaff} คนเท่าๆ กัน)`);
+    if (amountStr === null || amountStr === '') return; 
+    
     const totalAmount = parseFloat(amountStr) || 0;
     const bonusPerPerson = Math.floor(totalAmount / totalStaff); 
-    if (confirm(`ยอดรวม ${totalAmount} ฿\nหาร ${totalStaff} คน = จะได้โบนัสคนละ ${bonusPerPerson} ฿\n\nยืนยันการทำรายการหรือไม่?`)) {
+    
+    const isOk = await confirmMsg("ยืนยันโบนัส", `ยอดรวม ${totalAmount} ฿\nหารคนละ ${bonusPerPerson} ฿ สำหรับพนักงาน ${totalStaff} คน\nยืนยันหรือไม่?`);
+    if (isOk) {
       showLoading("กำลังแจกจ่ายโบนัส...");
       fetch(WEB_APP_URL, {
         method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: 'updateBonusAll', bonusPerPerson: bonusPerPerson })
-      }).then(() => {
+      }).then(async () => {
         masterData.settings.forEach(emp => emp.bonus = bonusPerPerson);
         renderSettings(); calculatePayroll(); hideLoading();
-        alert(`แจกโบนัสเรียบร้อย!`);
-      }).catch(err => { alert("เกิดข้อผิดพลาด"); hideLoading(); });
+        await alertMsg("สำเร็จ", `แจกโบนัสคนละ ${bonusPerPerson} ฿ เรียบร้อยแล้ว!`);
+      }).catch(err => { alertMsg("ผิดพลาด", "การเชื่อมต่อขัดข้อง"); hideLoading(); });
     }
   }
 
-  function promptUpdateData(name, type, currentVal) {
-    let msg = type === 'advance' ? "ระบุยอดเบิกล่วงหน้า (ติดหนี้)" : "ระบุยอดโบนัสพิเศษ (บวกเพิ่ม)";
-    const amountStr = prompt(`${msg} สำหรับคุณ ${name}:\n*ใส่ 0 เพื่อล้างยอด`, currentVal);
+  async function promptUpdateData(name, type, currentVal) {
+    let title = type === 'advance' ? "เบิกล่วงหน้า" : "โบนัสพิเศษ";
+    let msg = type === 'advance' ? `ระบุยอดที่ คุณ${name} เบิกไป:` : `ระบุยอดโบนัสพิเศษสำหรับ คุณ${name}:`;
+    
+    const amountStr = await promptMsg(title, msg, currentVal);
     if (amountStr === null) return; 
+    
     const amount = parseFloat(amountStr) || 0;
     const actionName = type === 'advance' ? 'updateAdvance' : 'updateBonusSingle';
     const payload = { action: actionName, name: name };
     if (type === 'advance') payload.advance = amount; else payload.bonus = amount;
+    
     showLoading("กำลังอัปเดตข้อมูล...");
     fetch(WEB_APP_URL, {
       method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
-    }).then(() => {
+    }).then(async () => {
       const emp = masterData.settings.find(s => s.name === name);
       if(emp) { if (type === 'advance') emp.advance = amount; else emp.bonus = amount; }
       renderSettings(); calculatePayroll(); hideLoading();
-    }).catch(err => { alert("เกิดข้อผิดพลาด"); hideLoading(); });
+      await alertMsg("สำเร็จ", "อัปเดตข้อมูลพนักงานเรียบร้อยแล้ว");
+    }).catch(err => { alertMsg("ผิดพลาด", "การเชื่อมต่อขัดข้อง"); hideLoading(); });
   }
 
-  function generateSlipImage(employeeName) {
+  async function generateSlipImage(employeeName) {
     showLoading("กำลังสร้างสลิปเงินเดือน...");
     const data = globalSummary[employeeName];
     if(!data) { hideLoading(); return; }
@@ -498,6 +585,7 @@
     document.getElementById('slip-late-pay').innerText = `-${data.calculated.latePenalty.toLocaleString()} ฿`;
     document.getElementById('slip-advance').innerText = `-${data.calculated.advanceDeduction.toLocaleString()} ฿`;
     document.getElementById('slip-net').innerText = `${data.calculated.netPay.toLocaleString()} ฿`;
+    
     html2canvas(document.getElementById('slip-template'), { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
       const link = document.createElement('a');
       link.download = `Slip_${data.config.name}.png`;
