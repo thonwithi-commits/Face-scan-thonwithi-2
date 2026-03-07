@@ -79,19 +79,6 @@
       box-shadow: 0 10px 20px rgba(0,0,0,0.2);
     }
 
-    #countdown-overlay {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 80px;
-      font-weight: 600;
-      color: #81c784;
-      text-shadow: 0 0 20px rgba(0,0,0,0.8);
-      display: none;
-      z-index: 10;
-    }
-
     #status { 
       font-size: 16px; 
       font-weight: 600; 
@@ -145,6 +132,8 @@
     .btn-out { background: rgba(220, 53, 69, 0.85); }
     .btn-manual { background: rgba(141, 110, 99, 0.85); width: 100%; font-size: 16px; padding: 14px; }
     .btn-admin { background: rgba(30, 30, 30, 0.85); width: 100%; font-size: 16px; padding: 14px; }
+    .btn-capture { background: rgba(0, 123, 255, 0.85); width: 100%; font-size: 18px; padding: 18px; }
+    
     .btn-cancel { 
       background: rgba(255, 255, 255, 0.15); 
       margin-top: 15px; 
@@ -190,7 +179,6 @@
     
     <div class="video-container">
       <video id="video" autoplay muted playsinline></video>
-      <div id="countdown-overlay">3</div>
     </div>
 
     <div id="status">กำลังโหลดระบบ...</div>
@@ -205,8 +193,12 @@
     <div id="register-ui">
       <input type="text" id="reg-name" placeholder="ระบุชื่อพนักงาน หรือ รหัส" class="input-field">
       <div class="btn-container" id="reg-btns">
-        <button class="btn btn-in" style="width: 100%;" onclick="startAutoMultiAngleReg()">เริ่มบันทึกใบหน้า (2 มุม)</button>
+        <button class="btn btn-in" style="width: 100%;" onclick="startManualRegistration()">เริ่มบันทึกใบหน้า (2 มุม)</button>
         <button class="btn btn-admin" style="width: 100%; background: rgba(121, 85, 72, 0.9); margin-top: 10px;" onclick="registerIdOnly()">ลงทะเบียนเฉพาะรหัส (Manual)</button>
+      </div>
+      <!-- ปุ่มบันทึกภาพแบบกดเอง -->
+      <div id="capture-ui" style="display:none; margin-top: 10px;">
+        <button id="capture-btn" class="btn btn-capture" onclick="performCapture()">บันทึกภาพ</button>
       </div>
     </div>
 
@@ -233,13 +225,12 @@
     let scanInterval = null;
     let isProcessing = false;
 
-    // สำหรับลงทะเบียน 2 มุม แบบ Auto
+    // สำหรับลงทะเบียน 2 มุม แบบกดเอง
     let regStep = 0;
     let regDescriptors = [];
-    let isAutoCapturing = false;
     const regInstructions = [
-      "กรุณามองตรง (อยู่นิ่งๆ)",
-      "กรุณาเอียงหน้าเล็กน้อย"
+      "กรุณามองตรง แล้วกดบันทึกภาพ",
+      "กรุณาเอียงหน้าเล็กน้อย แล้วกดบันทึกภาพ"
     ];
 
     window.onload = async () => {
@@ -361,16 +352,16 @@
       } else if (pass !== null) alert("รหัสผ่านไม่ถูกต้อง!");
     }
 
-    // --- ระบบลงทะเบียนแบบ Auto-Capture (2 มุม) ---
-    async function startAutoMultiAngleReg() {
+    // --- ระบบลงทะเบียนแบบกดเอง (2 มุม) ---
+    async function startManualRegistration() {
       const nameInput = document.getElementById('reg-name').value.trim();
       if (!nameInput) { alert("กรุณาระบุชื่อพนักงาน"); return; }
       
       regStep = 0;
       regDescriptors = [];
-      isAutoCapturing = true;
       document.getElementById('reg-btns').style.display = 'none';
       document.getElementById('reg-progress').style.display = 'flex';
+      document.getElementById('capture-ui').style.display = 'block';
       const videoEl = document.getElementById('video');
       videoEl.style.display = 'block';
       
@@ -381,62 +372,37 @@
       const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
       videoEl.srcObject = stream;
       
-      autoCaptureLoop();
+      document.getElementById('status').innerText = regInstructions[regStep];
     }
 
-    async function autoCaptureLoop() {
-      if (!isAutoCapturing) return;
+    async function performCapture() {
       const videoEl = document.getElementById('video');
       const statusEl = document.getElementById('status');
-      const overlay = document.getElementById('countdown-overlay');
-
-      statusEl.innerText = regInstructions[regStep];
-      statusEl.style.color = "#ffffff";
-
-      // รอจนกว่าจะเจอใบหน้า
-      let detection = null;
-      while (!detection && isAutoCapturing) {
-        detection = await faceapi.detectSingleFace(videoEl).withFaceLandmarks().withFaceDescriptor();
-        if (!detection) await new Promise(r => setTimeout(r, 200));
-      }
-
-      if (!isAutoCapturing) return;
-
-      // เมื่อเจอใบหน้าแล้ว นับถอยหลัง 3 2 1
-      overlay.style.display = 'block';
-      for (let i = 3; i > 0; i--) {
-        overlay.innerText = i;
-        await new Promise(r => setTimeout(r, 800));
-        if (!isAutoCapturing) return;
-      }
-      overlay.style.display = 'none';
-
-      // บันทึกภาพในจังหวะนั้น
-      const finalDetection = await faceapi.detectSingleFace(videoEl).withFaceLandmarks().withFaceDescriptor();
-      if (finalDetection) {
-        regDescriptors.push(Array.from(finalDetection.descriptor));
+      
+      statusEl.innerText = "กำลังตรวจจับใบหน้า...";
+      const detection = await faceapi.detectSingleFace(videoEl).withFaceLandmarks().withFaceDescriptor();
+      
+      if (detection) {
+        regDescriptors.push(Array.from(detection.descriptor));
         document.querySelectorAll('.dot')[regStep].classList.add('active');
         regStep++;
 
         if (regStep < 2) {
-          // ไปมุมต่อไป
-          setTimeout(autoCaptureLoop, 1000);
+          statusEl.innerText = regInstructions[regStep];
         } else {
-          // ครบ 2 มุม
           finalizeRegistration();
         }
       } else {
-        statusEl.innerText = "แสกนไม่ติด! กรุณานิ่งๆ และลองใหม่อีกครั้ง";
-        setTimeout(autoCaptureLoop, 1500);
+        alert("ไม่พบใบหน้า! กรุณามองที่กล้องให้ชัดเจนและอยู่นิ่งๆ");
+        statusEl.innerText = regInstructions[regStep];
       }
     }
 
     function finalizeRegistration() {
-      isAutoCapturing = false;
       const nameInput = document.getElementById('reg-name').value.trim();
-      document.getElementById('status').innerText = "ครบ 2 มุม! กำลังบันทึกข้อมูล...";
+      document.getElementById('status').innerText = "ครบ 2 มุม! กำลังส่งข้อมูล...";
+      document.getElementById('capture-ui').style.display = 'none';
       
-      // หาค่าเฉลี่ยจาก 2 มุม
       const averagedDescriptor = regDescriptors[0].map((_, i) => 
         regDescriptors.reduce((sum, d) => sum + d[i], 0) / regDescriptors.length
       );
@@ -467,14 +433,13 @@
     }
 
     function resetSystem() {
-      isAutoCapturing = false;
       if(scanInterval) clearInterval(scanInterval);
       const videoEl = document.getElementById('video');
       if(videoEl.srcObject) videoEl.srcObject.getTracks().forEach(track => track.stop()); 
       videoEl.style.display = 'none';
-      document.getElementById('countdown-overlay').style.display = 'none';
       document.getElementById('register-ui').style.display = 'none';
       document.getElementById('reg-progress').style.display = 'none';
+      document.getElementById('capture-ui').style.display = 'none';
       document.getElementById('reg-btns').style.display = 'block';
       document.getElementById('menu-buttons').style.display = 'flex';
       document.getElementById('btn-cancel').style.display = 'none';
