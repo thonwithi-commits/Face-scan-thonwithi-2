@@ -28,15 +28,14 @@
       font-size: 16px; font-weight: 600; background: rgba(0, 0, 0, 0.4);
       padding: 10px 15px; border-radius: 12px; margin: 15px 0; border: 1px solid rgba(255,255,255,0.1);
       color: #ffc107;
+      word-wrap: break-word;
     }
 
-    /* กล่องวิดีโอ */
     .video-container {
       width: 100%; max-width: 350px; height: 260px; margin: 0 auto 15px auto;
       border-radius: 16px; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.3);
       display: none; background: #000; position: relative;
     }
-    /* แก้ไขปัญหาเลนส์ Ultra Wide โดยการซูม (scale 1.6) และกลับด้านกล้องเป็นกระจก (scaleX -1) */
     video { width: 100%; height: 100%; object-fit: cover; transform: scale(1.6) scaleX(-1); }
     
     .btn-container { display: flex; flex-direction: column; gap: 12px; width: 100%; }
@@ -53,7 +52,6 @@
     .btn-admin { background: rgba(30, 30, 30, 0.85); font-size: 14px; padding: 12px; margin-top: 10px; }
     .btn-cancel { display: none; background: rgba(255,255,255,0.2); margin-top: 10px; font-size: 16px; width: 100%; }
 
-    /* Custom Modal */
     .modal-overlay {
       position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8);
       backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 1000;
@@ -64,14 +62,14 @@
     #register-ui { display: none; margin-top: 15px; }
     .input-field { width: 90%; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); color: white; margin-bottom: 10px; text-align: center; font-size: 18px; }
     
-    #db-count { font-size: 12px; opacity: 0.6; margin-top: 10px; }
+    #db-count { font-size: 12px; opacity: 0.8; margin-top: 10px; }
   </style>
 </head>
 <body>
 
 <div class="modal-overlay" id="custom-modal">
   <div class="modal-content">
-    <div id="modal-text" style="font-size: 20px"></div>
+    <div id="modal-text" style="font-size: 18px"></div>
     <button class="modal-btn" onclick="closeMessage()">ตกลง</button>
   </div>
 </div>
@@ -90,7 +88,6 @@
   <div id="register-ui">
     <input type="text" id="reg-name" placeholder="ชื่อพนักงาน (ให้ตรงกับแผ่นงาน Settings)" class="input-field">
     
-    <!-- จุดบอกสถานะการถ่าย 2 รูป -->
     <div class="progress-dots" id="reg-progress" style="display:none; justify-content:center; gap:10px; margin-bottom:15px;">
       <div class="dot" style="width:12px; height:12px; background:#ffc107; border-radius:50%; transition: 0.3s;"></div>
       <div class="dot" style="width:12px; height:12px; background:rgba(255,255,255,0.2); border-radius:50%; transition: 0.3s;"></div>
@@ -105,7 +102,6 @@
       <button class="btn btn-in" onclick="startSystem('เข้างาน')">เข้างาน</button>
       <button class="btn btn-out" onclick="startSystem('ออกงาน')">ออกงาน</button>
     </div>
-    <!-- ปุ่มคีย์เข้างาน (Manual) -->
     <button class="btn btn-manual" onclick="manualLog()">ลงเวลาด้วยรหัส/ชื่อพนักงาน (Manual)</button>
     <button class="btn btn-admin" onclick="checkAdmin()">ลงทะเบียนพนักงาน (Admin Only)</button>
   </div>
@@ -125,7 +121,6 @@
   let scanInterval = null;
   let currentMode = "";
   
-  // ตัวแปรสำหรับการถ่าย 2 รูป
   let regStep = 0;
   let regDescriptors = [];
   const regInstructions = ["มองตรง แล้วกดบันทึก", "เอียงหน้าเล็กน้อย แล้วกดบันทึก"];
@@ -143,39 +138,53 @@
       await fetchDatabase();
       
       document.getElementById('menu-buttons').style.display = 'flex';
-      if (knownFaces.length > 0) {
-        document.getElementById('status').innerText = "✅ ระบบพร้อมใช้งาน";
-        document.getElementById('status').style.color = "#81c784";
-      }
     } catch (e) {
-      document.getElementById('status').innerText = "❌ เกิดข้อผิดพลาดในการโหลดระบบ";
+      document.getElementById('status').innerText = "❌ เกิดข้อผิดพลาดในการโหลดระบบ AI";
     }
   };
 
-  // ดึงข้อมูลใบหน้าจาก Google Sheet (ใช้วิธี POST ธรรมดา ป้องกันปัญหา CORS บล็อกข้อมูล)
   async function fetchDatabase() {
-    document.getElementById('status').innerText = "กำลังซิงค์ข้อมูล...";
+    document.getElementById('status').innerText = "กำลังซิงค์ข้อมูลใบหน้า...";
     try {
+      // ใช้วิธีส่ง headers แบบ plain text เพื่อหลีกเลี่ยง CORS ของ Google
       const res = await fetch(WEB_APP_URL, { 
         method: 'POST', 
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({action: 'getKnownFaces'}) 
       });
-      const data = await res.json();
       
-      knownFaces = [];
-      data.forEach(u => {
-        // กรองเฉพาะคนที่มีข้อมูลใบหน้า (ป้องกันบั๊กจากคนที่ลงทะเบียนแบบพิมพ์ชื่ออย่างเดียว)
-        if (u.descriptor && u.descriptor.length > 0) {
-          let desc = typeof u.descriptor === 'string' ? JSON.parse(u.descriptor) : u.descriptor;
-          knownFaces.push({ name: u.label, descriptor: new Float32Array(desc) });
-        }
-      });
+      const textResponse = await res.text(); // ดึงมาเป็นข้อความก่อนเพื่อเช็ก Error
       
-      document.getElementById('db-count').innerText = `พนักงานที่แสกนหน้าได้: ${knownFaces.length} คน`;
-      document.getElementById('status').innerText = "✅ ระบบพร้อมใช้งาน";
-      document.getElementById('status').style.color = "#81c784";
+      try {
+        const data = JSON.parse(textResponse);
+        knownFaces = [];
+        
+        // รองรับข้อมูลรูปแบบเก่าและใหม่
+        let faceArray = Array.isArray(data) ? data : (data.data || []);
+
+        faceArray.forEach(u => {
+          let desc = u.descriptor;
+          let label = u.label || u.name || "Unknown";
+          
+          if (desc && desc.length > 0 && desc !== "[]") {
+            let parsedDesc = typeof desc === 'string' ? JSON.parse(desc) : desc;
+            knownFaces.push({ name: label, descriptor: new Float32Array(parsedDesc) });
+          }
+        });
+        
+        document.getElementById('db-count').innerText = `ซิงค์สำเร็จ: ${knownFaces.length} คน`;
+        document.getElementById('status').innerText = "✅ ระบบพร้อมใช้งาน";
+        document.getElementById('status').style.color = "#81c784";
+
+      } catch (parseError) {
+        console.error("Parse Error:", textResponse);
+        document.getElementById('status').innerText = "❌ รูปแบบข้อมูลจาก Google ผิดพลาด (เช็ก Google Script)";
+        document.getElementById('status').style.color = "#ff5252";
+      }
+
     } catch (error) {
-      document.getElementById('status').innerText = "❌ ดึงข้อมูลไม่สำเร็จ (ตรวจสอบว่ามีแถวว่างใน Sheet หรือไม่)";
+      document.getElementById('status').innerText = `❌ การเชื่อมต่อล้มเหลว: ${error.message}`;
+      document.getElementById('status').style.color = "#ff5252";
       console.error(error);
     }
   }
@@ -186,7 +195,6 @@
     document.getElementById('date').innerText = now.toLocaleDateString('th-TH', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
   }
 
-  // --- ฟังก์ชันบันทึกเวลาแบบคีย์มือ (Manual) ---
   function manualLog() {
     const empName = prompt("กรุณาระบุชื่อพนักงาน\n(หมายเหตุ: ต้องสะกดให้ตรงกับในแผ่นงาน Settings):");
     if (!empName) return; 
@@ -197,23 +205,21 @@
     document.getElementById('status').innerText = `กำลังบันทึกข้อมูลสำหรับ ${empName}...`;
     document.getElementById('status').style.color = "#ffc107";
     
-    // บันทึกแบบ no-cors ป้องกันการค้าง
     fetch(WEB_APP_URL, {
       method: 'POST',
-      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action: 'log', name: empName + " (Manual)", type: typeLabel, lat: "", lng: "" })
     })
     .then(() => {
       showMessage(`บันทึก ${typeLabel} สำเร็จ\nสวัสดีคุณ ${empName}`);
       resetSystem();
     })
-    .catch(() => {
-      showMessage("เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่");
+    .catch((err) => {
+      showMessage(`เกิดข้อผิดพลาดในการส่งข้อมูล: ${err.message}`);
       resetSystem();
     });
   }
 
-  // --- ฟังก์ชันลงทะเบียนเฉพาะรหัส (Manual Admin) ---
   function registerIdOnly() {
     const name = document.getElementById('reg-name').value.trim();
     if (!name) { showMessage("กรุณาพิมพ์ชื่อพนักงานก่อนครับ"); return; }
@@ -221,17 +227,19 @@
     document.getElementById('status').innerText = "กำลังส่งข้อมูล...";
     fetch(WEB_APP_URL, {
       method: 'POST',
-      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ action: 'register', name: name + " (Manual)", descriptor: [] })
     }).then(() => {
       showMessage(`ลงทะเบียน ${name} (แบบคีย์ชื่อ) สำเร็จ!`);
       setTimeout(() => { fetchDatabase(); resetSystem(); }, 1500);
+    }).catch(err => {
+      showMessage(`Error: ${err.message}`);
     });
   }
 
   async function startSystem(mode) {
     if(knownFaces.length === 0) {
-      showMessage("ยังไม่มีข้อมูลใบหน้าพนักงานในระบบ\n(หากเพิ่งลงทะเบียน โปรดรอสักครู่)");
+      showMessage("ยังไม่มีข้อมูลใบหน้าในระบบ หรือซิงค์ข้อมูลไม่สำเร็จ\nกรุณาลงทะเบียนใบหน้าก่อนครับ");
       return;
     }
     
@@ -239,7 +247,7 @@
     document.getElementById('menu-buttons').style.display = 'none';
     document.getElementById('video-box').style.display = 'block';
     document.getElementById('btn-cancel').style.display = 'block';
-    document.getElementById('status').innerText = `กำลังเปิดกล้อง เพื่อสแกน${mode}...`;
+    document.getElementById('status').innerText = `กล้องพร้อมแล้ว สแกน${mode}ได้เลย...`;
     document.getElementById('status').style.color = "#fff";
     
     try {
@@ -248,7 +256,7 @@
       isProcessing = false;
       startScanning();
     } catch(err) {
-      showMessage("ไม่สามารถเปิดกล้องได้");
+      showMessage("ไม่สามารถเปิดกล้องได้ กรุณาอนุญาตการใช้กล้อง");
       resetSystem();
     }
   }
@@ -267,7 +275,7 @@
           if (dist < bestMatch.distance) bestMatch = { name: u.name, distance: dist };
         });
 
-        // Threshold 0.58 ให้แสกนติดง่ายขึ้น
+        // Threshold 0.58 สแกนง่ายขึ้น
         if (bestMatch.distance < 0.58) {
           isProcessing = true; 
           clearInterval(scanInterval);
@@ -284,18 +292,18 @@
   }
 
   function saveLog(name) {
-    document.getElementById('status').innerText = `พบคุณ: ${name} กำลังบันทึก...`;
+    document.getElementById('status').innerText = `พบคุณ: ${name} กำลังบันทึกเวลา...`;
     fetch(WEB_APP_URL, { 
       method: 'POST', 
-      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({action:'log', name: name, type: currentMode, lat: "", lng: ""}) 
     })
     .then(() => { 
       showMessage(`บันทึก ${currentMode} สำเร็จ\nสวัสดีคุณ ${name}`); 
       stopCamera();
     })
-    .catch(() => {
-      showMessage(`เครือข่ายมีปัญหา กรุณาลองใหม่`);
+    .catch((err) => {
+      showMessage(`เครือข่ายมีปัญหา: ${err.message}`);
       resetSystem();
     });
   }
@@ -308,7 +316,6 @@
       document.getElementById('video-box').style.display = 'block';
       document.getElementById('btn-cancel').style.display = 'block';
       
-      // Reset การถ่ายรูป 2 มุม
       regStep = 0;
       regDescriptors = [];
       document.getElementById('reg-progress').style.display = 'flex';
@@ -323,7 +330,6 @@
     }
   }
 
-  // --- ระบบบันทึก 2 รูปแบบเฉลี่ยค่า ---
   async function performCapture() {
     const name = document.getElementById('reg-name').value.trim();
     if(!name) { showMessage("กรุณาพิมพ์ชื่อพนักงานก่อนครับ"); return; }
@@ -335,26 +341,29 @@
     if (detection) {
       regDescriptors.push(Array.from(detection.descriptor));
       const dots = document.querySelectorAll('.dot');
-      if (dots[regStep]) dots[regStep].style.background = '#81c784'; // เปลี่ยนเป็นสีเขียว
+      if (dots[regStep]) dots[regStep].style.background = '#81c784'; 
       regStep++;
 
       if (regStep < 2) {
         document.getElementById('status').innerText = regInstructions[regStep];
-        if (dots[regStep]) dots[regStep].style.background = '#ffc107'; // เลื่อนจุดสีเหลือง
+        if (dots[regStep]) dots[regStep].style.background = '#ffc107'; 
       } else {
-        // ครบ 2 รูป นำมาหาค่าเฉลี่ย
         const averaged = regDescriptors[0].map((_, i) => (regDescriptors[0][i] + regDescriptors[1][i]) / 2);
         
-        document.getElementById('status').innerText = "ครบ 2 มุม กำลังส่งข้อมูลไปที่ระบบ...";
+        document.getElementById('status').innerText = "ครบ 2 มุม กำลังบันทึกข้อมูล...";
         fetch(WEB_APP_URL, { 
           method: 'POST', 
-          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify({action:'register', name: name, descriptor: averaged}) 
         })
         .then(() => { 
           showMessage(`ลงทะเบียนคุณ ${name} สำเร็จ!`); 
           stopCamera();
-          setTimeout(() => { fetchDatabase(); resetSystem(); }, 1500); // โหลดข้อมูลใหม่ทันที
+          setTimeout(() => { fetchDatabase(); resetSystem(); }, 1500); // โหลดข้อมูลกลับมาทันที
+        })
+        .catch(err => {
+          showMessage(`เกิดข้อผิดพลาด: ${err.message}`);
+          stopCamera();
         });
       }
     } else {
@@ -393,8 +402,8 @@
         document.getElementById('status').innerText = "✅ ระบบพร้อมใช้งาน";
         document.getElementById('status').style.color = "#81c784";
     } else {
-        document.getElementById('status').innerText = "กรุณาเลือกทำรายการ";
-        document.getElementById('status').style.color = "#fff";
+        document.getElementById('status').innerText = "กรุณาเลือกทำรายการ (ยังไม่มีใบหน้าในระบบ)";
+        document.getElementById('status').style.color = "#ffc107";
     }
   }
 </script>
