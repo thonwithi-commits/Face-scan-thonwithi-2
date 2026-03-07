@@ -264,9 +264,16 @@
   async function loadAllData() {
     showLoading();
     try {
+      // เพิ่ม headers ป้องกันการถูกบล็อกจาก Google
+      const fetchOpts = (action) => ({
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({action: action})
+      });
+
       const [logsRes, settingsRes] = await Promise.all([
-        fetch(WEB_APP_URL, { method: 'POST', body: JSON.stringify({action:'getLogs'}) }),
-        fetch(WEB_APP_URL, { method: 'POST', body: JSON.stringify({action:'getEmployeeSettings'}) })
+        fetch(WEB_APP_URL, fetchOpts('getLogs')),
+        fetch(WEB_APP_URL, fetchOpts('getEmployeeSettings'))
       ]);
       
       masterData.logs = await logsRes.json();
@@ -276,7 +283,8 @@
       renderLogs();
       calculatePayroll();
     } catch (e) {
-      alert("ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบการเชื่อมต่อ");
+      console.error(e);
+      alert("ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบการเชื่อมต่อ (ให้เช็กว่าพิมพ์หัวข้อ Advance และ Bonus ใน Google Sheets หรือยัง และตรวจสอบการ Deploy)");
     }
     hideLoading();
   }
@@ -463,7 +471,9 @@
       showLoading("กำลังแจกจ่ายโบนัส...");
 
       fetch(WEB_APP_URL, {
-        method: 'POST', body: JSON.stringify({ action: 'updateBonusAll', bonusPerPerson: bonusPerPerson })
+        method: 'POST', 
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'updateBonusAll', bonusPerPerson: bonusPerPerson })
       }).then(() => {
         masterData.settings.forEach(emp => emp.bonus = bonusPerPerson);
         renderSettings(); calculatePayroll(); hideLoading();
@@ -487,7 +497,9 @@
     showLoading("กำลังอัปเดตข้อมูล...");
 
     fetch(WEB_APP_URL, {
-      method: 'POST', body: JSON.stringify(payload)
+      method: 'POST', 
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
     }).then(() => {
       const emp = masterData.settings.find(s => s.name === name);
       if(emp) {
