@@ -89,7 +89,6 @@
       border: 1px solid rgba(255,255,255,0.1);
     }
 
-    /* Progress indicator for Registration */
     .progress-dots {
       display: none;
       justify-content: center;
@@ -175,7 +174,7 @@
     </div>
     
     <video id="video" autoplay muted playsinline></video>
-    <div id="status">กรุณาเลือกทำรายการ</div>
+    <div id="status">กำลังโหลดระบบ...</div>
 
     <!-- Multi-angle dots -->
     <div class="progress-dots" id="reg-progress">
@@ -199,7 +198,7 @@
     </div>
 
     <!-- ปุ่มเมนูหน้าแรก -->
-    <div class="btn-container" id="menu-buttons">
+    <div class="btn-container" id="menu-buttons" style="display:none;">
       <div class="btn-row">
         <button class="btn btn-in" onclick="startSystem('เข้างาน')">สแกนเข้างาน</button>
         <button class="btn btn-out" onclick="startSystem('ออกงาน')">สแกนออกงาน</button>
@@ -215,26 +214,7 @@
     const ADMIN_PASSWORD = "123"; 
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwBd8OsZFF2i44KrfCnGI7c9idmDakwWEgse9qt_WDOD5OOxG13eRaXf16SavEnP2oZ/exec"; 
 
-    function updateClock() {
-      const now = new Date();
-      const optionsTime = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-      const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      document.getElementById('time').innerText = now.toLocaleTimeString('th-TH', optionsTime);
-      document.getElementById('date').innerText = now.toLocaleDateString('th-TH', optionsDate);
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
-
-    const video = document.getElementById('video');
-    const status = document.getElementById('status');
-    const menuButtons = document.getElementById('menu-buttons');
-    const btnCancel = document.getElementById('btn-cancel');
-    const registerUI = document.getElementById('register-ui');
-    const regProgress = document.getElementById('reg-progress');
-    const regBtns = document.getElementById('reg-btns');
-    const captureUi = document.getElementById('capture-ui');
-    const capBtn = document.getElementById('cap-btn');
-    
+    let modelsLoaded = false;
     let knownFaces = [];
     let currentMode = ""; 
     let scanInterval = null;
@@ -250,6 +230,49 @@
       "บันทึกมุมที่ 4 (เงยหน้าขึ้น)",
       "บันทึกมุมที่ 5 (ก้มหน้าลง)"
     ];
+
+    // โหลดระบบเมื่อเปิดหน้าเว็บ
+    window.onload = async () => {
+      updateClock();
+      setInterval(updateClock, 1000);
+      
+      try {
+        const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+        await Promise.all([
+          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        ]);
+        modelsLoaded = true;
+        await fetchDatabase();
+        document.getElementById('menu-buttons').style.display = 'flex';
+        document.getElementById('status').innerText = "กรุณาเลือกทำรายการ";
+      } catch (e) {
+        document.getElementById('status').innerText = "ผิดพลาด: โหลดข้อมูลไม่สำเร็จ";
+      }
+    };
+
+    async function fetchDatabase() {
+      try {
+        const response = await fetch(WEB_APP_URL, { 
+          method: 'POST', 
+          body: JSON.stringify({action: 'getKnownFaces'}) 
+        });
+        const resData = await response.json();
+        knownFaces = resData.map(u => ({ name: u.label, descriptor: new Float32Array(u.descriptor) }));
+        console.log("Database updated:", knownFaces.length, "employees found.");
+      } catch (e) {
+        console.error("Fetch DB Error:", e);
+      }
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const optionsTime = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+      const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('time').innerText = now.toLocaleTimeString('th-TH', optionsTime);
+      document.getElementById('date').innerText = now.toLocaleDateString('th-TH', optionsDate);
+    }
 
     function manualLog() {
       const empId = prompt("กรุณาระบุรหัสพนักงาน (เช่น A1001):");
@@ -268,31 +291,21 @@
     }
 
     async function startSystem(mode) {
+      if (!modelsLoaded) { alert("ระบบกำลังโหลด Model... กรุณารอสักครู่"); return; }
       try {
         currentMode = mode;
         menuButtons.style.display = 'none';
         registerUI.style.display = 'none';
         btnCancel.style.display = 'inline-block';
         video.style.display = 'block';
-        status.innerText = `กำลังเตรียมกล้องสำหรับ "${mode}"...`;
+        status.innerText = "กำลังเปิดกล้อง...";
 
         const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
         video.srcObject = stream;
         
-        status.innerText = "กำลังโหลดฐานข้อมูล...";
-        const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-        await Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-        ]);
-
-        const response = await fetch(WEB_APP_URL, { 
-          method: 'POST', 
-          body: JSON.stringify({action: 'getKnownFaces'}) 
-        });
-        const resData = await response.json();
-        knownFaces = resData.map(u => ({ name: u.label, descriptor: new Float32Array(u.descriptor) }));
+        // โหลดข้อมูลล่าสุดจากแผ่นงานก่อนแสกน เพื่อความแม่นยำ
+        status.innerText = "กำลังตรวจสอบความพร้อมข้อมูลล่าสุด...";
+        await fetchDatabase();
 
         status.innerText = `พร้อมสแกน! กรุณามองกล้องเพื่อ${mode}`;
         status.style.color = "#a5d6a7"; 
@@ -315,12 +328,15 @@
             const dist = faceapi.euclideanDistance(detection.descriptor, u.descriptor);
             if (dist < bestMatch.distance) bestMatch = { name: u.name, distance: dist };
           });
-          if (bestMatch.distance < 0.45) {
+          
+          // ปรับความแม่นยำ (Threshold) เป็น 0.55 เพื่อให้ใช้งานง่ายขึ้น
+          if (bestMatch.distance < 0.55) {
             isProcessing = true; 
             clearInterval(scanInterval);
             saveAttendance(bestMatch.name);
           } else {
-            status.innerText = "ไม่พบประวัติพนักงานในระบบ";
+            // แสดงระยะห่างเพื่อให้ Admin ทราบว่าใกล้เคียงแค่ไหน
+            status.innerText = `ไม่พบในระบบ (Distance: ${bestMatch.distance.toFixed(2)})`;
             status.style.color = "#ffcc80"; 
           }
         }
@@ -371,12 +387,6 @@
       const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
       video.srcObject = stream;
       
-      await Promise.all([
-        faceapi.nets.ssdMobilenetv1.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models'),
-        faceapi.nets.faceLandmark68Net.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models'),
-        faceapi.nets.faceRecognitionNet.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models')
-      ]);
-      
       status.innerText = "พร้อมแล้ว! กรุณามองตรงแล้วกดบันทึก";
       capBtn.innerText = regInstructions[0];
     }
@@ -395,7 +405,6 @@
           status.innerText = "สำเร็จ! ต่อไปกรุณา " + regInstructions[regStep].replace("บันทึก", "");
           capBtn.innerText = regInstructions[regStep];
         } else {
-          // ครบ 5 มุม ส่งข้อมูล
           finalizeRegistration();
         }
       } else {
@@ -406,9 +415,8 @@
 
     function finalizeRegistration() {
       const nameInput = document.getElementById('reg-name').value.trim();
-      status.innerText = "ครบถ้วน! กำลังประมวลผลและบันทึกข้อมูล...";
+      status.innerText = "ครบถ้วน! กำลังบันทึกข้อมูลและอัปเดตระบบ...";
       
-      // เราจะส่งค่าเฉลี่ยของ Descriptor ไปเพื่อความแม่นยำสูงที่สุด
       const averagedDescriptor = regDescriptors[0].map((_, i) => 
         regDescriptors.reduce((sum, d) => sum + d[i], 0) / regDescriptors.length
       );
@@ -418,8 +426,12 @@
         mode: 'no-cors',
         body: JSON.stringify({ action: 'register', name: nameInput, descriptor: averagedDescriptor })
       }).then(() => {
-        alert(`ลงทะเบียนพนักงาน: "${nameInput}" ด้วยระบบ 5 มุมมองสำเร็จ!`);
-        resetSystem();
+        // อัปเดตข้อมูลพนักงานทันทีหลังจากบันทึก
+        setTimeout(async () => {
+          await fetchDatabase();
+          alert(`ลงทะเบียนคุณ: "${nameInput}" สำเร็จ! พร้อมใช้งานทันที`);
+          resetSystem();
+        }, 1500); // รอจังหวะ Google Script เขียนไฟล์เล็กน้อย
       });
     }
 
@@ -432,8 +444,11 @@
         mode: 'no-cors',
         body: JSON.stringify({ action: 'register', name: nameInput + " (Manual)", descriptor: [] })
       }).then(() => {
-        alert(`ลงทะเบียนรหัสพนักงานสำเร็จ!`);
-        resetSystem();
+        setTimeout(async () => {
+          await fetchDatabase();
+          alert(`ลงทะเบียนรหัสพนักงานสำเร็จ!`);
+          resetSystem();
+        }, 1000);
       });
     }
 
