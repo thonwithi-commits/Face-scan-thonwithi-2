@@ -195,11 +195,8 @@
 
     <div id="status">กำลังโหลดระบบ...</div>
 
-    <!-- Multi-angle dots -->
+    <!-- Multi-angle dots (2 มุม) -->
     <div class="progress-dots" id="reg-progress">
-      <div class="dot"></div>
-      <div class="dot"></div>
-      <div class="dot"></div>
       <div class="dot"></div>
       <div class="dot"></div>
     </div>
@@ -208,7 +205,7 @@
     <div id="register-ui">
       <input type="text" id="reg-name" placeholder="ระบุชื่อพนักงาน หรือ รหัส" class="input-field">
       <div class="btn-container" id="reg-btns">
-        <button class="btn btn-in" style="width: 100%;" onclick="startAutoMultiAngleReg()">เริ่มบันทึกใบหน้าอัตโนมัติ (5 มุม)</button>
+        <button class="btn btn-in" style="width: 100%;" onclick="startAutoMultiAngleReg()">เริ่มบันทึกใบหน้า (2 มุม)</button>
         <button class="btn btn-admin" style="width: 100%; background: rgba(121, 85, 72, 0.9); margin-top: 10px;" onclick="registerIdOnly()">ลงทะเบียนเฉพาะรหัส (Manual)</button>
       </div>
     </div>
@@ -236,16 +233,13 @@
     let scanInterval = null;
     let isProcessing = false;
 
-    // สำหรับลงทะเบียน 5 มุม แบบ Auto
+    // สำหรับลงทะเบียน 2 มุม แบบ Auto
     let regStep = 0;
     let regDescriptors = [];
     let isAutoCapturing = false;
     const regInstructions = [
       "กรุณามองตรง (อยู่นิ่งๆ)",
-      "กรุณาเอียงหน้าไปทางซ้าย",
-      "กรุณาเอียงหน้าไปทางขวา",
-      "กรุณาเงยหน้าขึ้นเล็กน้อย",
-      "กรุณาก้มหน้าลงเล็กน้อย"
+      "กรุณาเอียงหน้าเล็กน้อย"
     ];
 
     window.onload = async () => {
@@ -367,7 +361,7 @@
       } else if (pass !== null) alert("รหัสผ่านไม่ถูกต้อง!");
     }
 
-    // --- ระบบลงทะเบียนแบบ Auto-Capture ---
+    // --- ระบบลงทะเบียนแบบ Auto-Capture (2 มุม) ---
     async function startAutoMultiAngleReg() {
       const nameInput = document.getElementById('reg-name').value.trim();
       if (!nameInput) { alert("กรุณาระบุชื่อพนักงาน"); return; }
@@ -424,11 +418,11 @@
         document.querySelectorAll('.dot')[regStep].classList.add('active');
         regStep++;
 
-        if (regStep < 5) {
+        if (regStep < 2) {
           // ไปมุมต่อไป
           setTimeout(autoCaptureLoop, 1000);
         } else {
-          // ครบถ้วน
+          // ครบ 2 มุม
           finalizeRegistration();
         }
       } else {
@@ -440,9 +434,9 @@
     function finalizeRegistration() {
       isAutoCapturing = false;
       const nameInput = document.getElementById('reg-name').value.trim();
-      document.getElementById('status').innerText = "ครบ 5 มุม! กำลังประมวลผลข้อมูลแม่นยำสูง...";
+      document.getElementById('status').innerText = "ครบ 2 มุม! กำลังบันทึกข้อมูล...";
       
-      // หาค่าเฉลี่ย
+      // หาค่าเฉลี่ยจาก 2 มุม
       const averagedDescriptor = regDescriptors[0].map((_, i) => 
         regDescriptors.reduce((sum, d) => sum + d[i], 0) / regDescriptors.length
       );
@@ -454,7 +448,7 @@
       }).then(() => {
         setTimeout(async () => {
           await fetchDatabase();
-          alert(`ลงทะเบียนพนักงาน: "${nameInput}" สำเร็จ! ระบบได้เรียนรู้ใบหน้าคุณอย่างแม่นยำแล้ว`);
+          alert(`ลงทะเบียนพนักงาน: "${nameInput}" สำเร็จ!`);
           resetSystem();
         }, 1500);
       });
