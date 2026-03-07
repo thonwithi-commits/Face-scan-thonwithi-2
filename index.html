@@ -165,6 +165,48 @@
       outline: none;
     }
 
+    /* --- ส่วนของ Custom Modal (กล่องแจ้งเตือนแบบใหม่) --- */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .modal-content {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 30px;
+      border-radius: 20px;
+      max-width: 400px;
+      width: 80%;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+      transform: translateY(20px);
+      transition: transform 0.3s ease;
+    }
+    .modal-overlay.show { display: flex; opacity: 1; }
+    .modal-overlay.show .modal-content { transform: translateY(0); }
+    .modal-message { font-size: 20px; font-weight: 400; margin-bottom: 25px; line-height: 1.5; color: #fff; }
+    .modal-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.4);
+      padding: 12px 30px;
+      border-radius: 12px;
+      color: white;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .modal-btn:hover { background: rgba(255, 255, 255, 0.3); }
+
     @media (max-height: 800px) {
       .glass-card { padding: 20px 15px; }
       #time { font-size: 40px; }
@@ -174,6 +216,14 @@
   </style>
 </head>
 <body>
+
+  <!-- โครงสร้างของ Custom Modal -->
+  <div class="modal-overlay" id="custom-modal">
+    <div class="modal-content">
+      <div class="modal-message" id="modal-text">ข้อความแจ้งเตือน</div>
+      <button class="modal-btn" onclick="closeMessage()">ตกลง</button>
+    </div>
+  </div>
 
   <div class="glass-card">
     <img src="indexlogo.png" alt="Thonwithi Logo" class="brand-logo" onerror="this.style.display='none';">
@@ -227,6 +277,19 @@
     let scanInterval = null;
     let isProcessing = false;
 
+    // ฟังก์ชันแสดงกล่องแจ้งเตือนแบบกำหนดเอง
+    function showMessage(text) {
+      const modal = document.getElementById('custom-modal');
+      const modalText = document.getElementById('modal-text');
+      modalText.innerText = text;
+      modal.classList.add('show');
+    }
+
+    function closeMessage() {
+      const modal = document.getElementById('custom-modal');
+      modal.classList.remove('show');
+    }
+
     let regStep = 0;
     let regDescriptors = [];
     const regInstructions = [
@@ -247,7 +310,7 @@
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
         ]);
         modelsLoaded = true;
-        fetchDatabase(); // โหลดฐานข้อมูลแบบ Background
+        fetchDatabase(); 
         document.getElementById('menu-buttons').style.display = 'flex';
         statusEl.innerText = "กรุณาเลือกทำรายการ";
       } catch (e) {
@@ -285,13 +348,13 @@
         mode: 'no-cors',
         body: JSON.stringify({ action: 'log', name: empId + " (Manual)", type: typeLabel, lat: "-", lng: "-" })
       }).then(() => {
-        alert(`บันทึก ${typeLabel} สำหรับรหัส ${empId} สำเร็จ!`);
+        showMessage(`บันทึก ${typeLabel} สำหรับรหัส ${empId} สำเร็จ!`);
         resetSystem();
-      }).catch(err => alert("เกิดข้อผิดพลาดในการเชื่อมต่อ"));
+      }).catch(err => showMessage("เกิดข้อผิดพลาดในการเชื่อมต่อ"));
     }
 
     async function startSystem(mode) {
-      if (!modelsLoaded) { alert("ระบบกำลังโหลด... กรุณารอสักครู่"); return; }
+      if (!modelsLoaded) { showMessage("ระบบกำลังโหลด... กรุณารอสักครู่"); return; }
       const statusEl = document.getElementById('status');
       try {
         currentMode = mode;
@@ -303,7 +366,7 @@
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
         const videoEl = document.getElementById('video');
         videoEl.srcObject = stream;
-        videoEl.play(); // บังคับให้วิดีโอเล่น
+        videoEl.play(); 
 
         if (knownFaces.length === 0) {
           statusEl.innerText = "กำลังดึงข้อมูลพนักงาน...";
@@ -315,7 +378,7 @@
         isProcessing = false;
         startScanning();
       } catch (err) {
-        alert("ไม่สามารถเปิดกล้องได้: " + err.message);
+        showMessage("ไม่สามารถเปิดกล้องได้: " + err.message);
         resetSystem();
       }
     }
@@ -352,7 +415,7 @@
         mode: 'no-cors',
         body: JSON.stringify({ action: 'log', name: empName, type: currentMode, lat: "-", lng: "-" })
       }).then(() => {
-        alert(`บันทึกเวลา ${currentMode} สำเร็จ!`);
+        showMessage(`บันทึกเวลา ${currentMode} สำเร็จ!`);
         resetSystem();
       });
     }
@@ -365,12 +428,12 @@
         document.getElementById('register-ui').style.display = 'block';
         document.getElementById('video-box').style.display = 'none'; 
         document.getElementById('status').innerText = "โหมด Admin: ระบุชื่อพนักงาน";
-      } else if (pass !== null) alert("รหัสผ่านไม่ถูกต้อง!");
+      } else if (pass !== null) showMessage("รหัสผ่านไม่ถูกต้อง!");
     }
 
     async function startManualRegistration() {
       const nameInput = document.getElementById('reg-name').value.trim();
-      if (!nameInput) { alert("กรุณาระบุชื่อพนักงาน"); return; }
+      if (!nameInput) { showMessage("กรุณาระบุชื่อพนักงาน"); return; }
       
       regStep = 0;
       regDescriptors = [];
@@ -390,7 +453,7 @@
         videoEl.play();
         document.getElementById('status').innerText = regInstructions[regStep];
       } catch (e) {
-        alert("เปิดกล้องล้มเหลว");
+        showMessage("เปิดกล้องล้มเหลว");
         resetSystem();
       }
     }
@@ -413,7 +476,7 @@
           finalizeRegistration();
         }
       } else {
-        alert("ไม่พบใบหน้า! กรุณามองที่กล้องให้ชัดเจนและอยู่นิ่งๆ");
+        showMessage("ไม่พบใบหน้า! กรุณามองที่กล้องให้ชัดเจนและอยู่นิ่งๆ");
         statusEl.innerText = regInstructions[regStep];
       }
     }
@@ -434,7 +497,7 @@
       }).then(() => {
         setTimeout(async () => {
           await fetchDatabase();
-          alert(`ลงทะเบียนพนักงาน: "${nameInput}" สำเร็จ!`);
+          showMessage(`ลงทะเบียนพนักงาน: "${nameInput}" สำเร็จ!`);
           resetSystem();
         }, 1500);
       });
@@ -442,13 +505,13 @@
 
     function registerIdOnly() {
       const nameInput = document.getElementById('reg-name').value.trim();
-      if (!nameInput) { alert("กรุณาระบุรหัสพนักงาน"); return; }
+      if (!nameInput) { showMessage("กรุณาระบุรหัสพนักงาน"); return; }
       fetch(WEB_APP_URL, {
         method: 'POST',
         mode: 'no-cors',
         body: JSON.stringify({ action: 'register', name: nameInput + " (Manual)", descriptor: [] })
       }).then(() => {
-        setTimeout(async () => { await fetchDatabase(); alert(`ลงทะเบียนรหัสสำเร็จ!`); resetSystem(); }, 1000);
+        setTimeout(async () => { await fetchDatabase(); showMessage(`ลงทะเบียนรหัสสำเร็จ!`); resetSystem(); }, 1000);
       });
     }
 
