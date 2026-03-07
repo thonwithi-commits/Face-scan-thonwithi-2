@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ระบบลงเวลาเข้า-ออกงาน</title>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    /* ตั้งค่าพื้นหลังโทนสีน้ำตาล-กาแฟ */
+    body { 
+      font-family: 'Sarabun', sans-serif; 
+      margin: 0; 
+      padding: 0;
+      min-height: 100vh; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: center; 
+      background: linear-gradient(135deg, #3e2723 0%, #5d4037 50%, #8d6e63 100%);
+      background-attachment: fixed;
+      color: #ffffff;
+      overflow: hidden;
+    }
+
+    /* เอฟเฟกต์แสงหมุนวนด้านหลัง (ซ่อนไว้ข้างหลัง) */
+    body::before {
+      content: "";
+      position: absolute;
+      top: -50%; left: -50%; width: 200%; height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 60%);
+      animation: rotate 40s linear infinite;
+      z-index: -1;
+    }
+    @keyframes rotate { 100% { transform: rotate(360deg); } }
+
+    /* การ์ดสไตล์กระจก (Glassmorphism) */
+    .glass-card { 
+      background: rgba(255, 255, 255, 0.1); 
+      backdrop-filter: blur(16px); 
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.2); 
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); 
+      border-radius: 24px; 
+      width: 90%; 
+      max-width: 600px; 
+      padding: 40px 30px;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* โลโก้ร้าน */
+    .brand-logo {
+      max-width: 180px;
+      height: auto;
+      margin: 0 auto 20px auto;
+      display: block;
+      filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.3));
+    }
+
+    /* นาฬิกา */
+    .clock-container { margin-bottom: 30px; }
+    #time { font-size: 56px; font-weight: 600; letter-spacing: 2px; text-shadow: 2px 2px 4px rgba(0,0,0,0.4); margin: 0; line-height: 1; }
+    #date { font-size: 18px; color: rgba(255,255,255,0.8); margin-top: 5px; font-weight: 300; }
+
+    /* วิดีโอสแกนหน้า */
+    video { 
+      width: 100%; 
+      max-width: 450px; 
+      border-radius: 16px; 
+      background: rgba(0,0,0,0.5); 
+      transform: scaleX(-1); 
+      display: none; 
+      margin: 0 auto 20px auto; 
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+
+    /* กล่องข้อความสถานะ */
+    #status { 
+      font-size: 18px; 
+      font-weight: 600; 
+      color: #fff; 
+      min-height: 25px; 
+      background: rgba(0, 0, 0, 0.25);
+      padding: 12px 20px;
+      border-radius: 12px;
+      margin-bottom: 25px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    /* ปุ่มกด */
+    .btn-container { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+    
+    .btn { 
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 16px; 
+      font-size: 22px; 
+      font-weight: 600; 
+      cursor: pointer; 
+      color: white; 
+      flex: 1; 
+      min-width: 160px; 
+      padding: 20px;
+      transition: all 0.3s ease; 
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+      font-family: 'Sarabun', sans-serif;
+    }
+    .btn:active { transform: scale(0.96); }
+    
+    .btn-in { background: rgba(40, 167, 69, 0.5); }
+    .btn-in:hover { background: rgba(40, 167, 69, 0.7); border-color: rgba(255,255,255,0.6); box-shadow: 0 0 15px rgba(40, 167, 69, 0.5); }
+    
+    .btn-out { background: rgba(220, 53, 69, 0.5); }
+    .btn-out:hover { background: rgba(220, 53, 69, 0.7); border-color: rgba(255,255,255,0.6); box-shadow: 0 0 15px rgba(220, 53, 69, 0.5); }
+    
+    .btn-cancel { 
+      background: rgba(255, 255, 255, 0.15); 
+      margin-top: 15px; 
+      width: 100%; 
+      font-size: 18px; 
+      padding: 15px;
+      display: none; 
+    }
+    .btn-cancel:hover { background: rgba(255, 255, 255, 0.25); }
+
+    /* ปรับแต่ง Scrollbar */
+    ::-webkit-scrollbar { width: 0px; }
+  </style>
+</head>
+<body>
+
+  <div class="glass-card">
+    <!-- โลโก้ร้าน (ต้องนำไฟล์ indexlogo.png ไปอัปโหลดไว้ที่ GitHub ที่เดียวกับโค้ดนี้) -->
+    <img src="indexlogo.png" alt="Thonwithi Logo" class="brand-logo" onerror="this.style.display='none';">
+
+    <!-- ส่วนนาฬิกา -->
+    <div class="clock-container">
+      <p id="time">00:00:00</p>
+      <p id="date">วัน เดือน ปี</p>
+    </div>
+    
+    <!-- วิดีโอแสกน -->
+    <video id="video" autoplay muted playsinline></video>
+    
+    <!-- ข้อความสถานะ -->
+    <div id="status">กรุณาเลือกทำรายการ</div>
+
+    <!-- ปุ่มเลือก เข้า/ออก -->
+    <div class="btn-container" id="menu-buttons">
+      <button class="btn btn-in" onclick="startSystem('เข้างาน')">สแกนเข้างาน</button>
+      <button class="btn btn-out" onclick="startSystem('ออกงาน')">สแกนออกงาน</button>
+    </div>
+
+    <!-- ปุ่มยกเลิก -->
+    <button id="btn-cancel" class="btn btn-cancel" onclick="resetSystem()">ยกเลิก / กลับหน้าแรก</button>
+  </div>
+
+  <script>
+    // การทำงานของนาฬิกา
+    function updateClock() {
+      const now = new Date();
+      const optionsTime = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+      const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+      document.getElementById('time').innerText = now.toLocaleTimeString('th-TH', optionsTime);
+      document.getElementById('date').innerText = now.toLocaleDateString('th-TH', optionsDate);
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // URL Web App ของ Google Script
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwBd8OsZFF2i44KrfCnGI7c9idmDakwWEgse9qt_WDOD5OOxG13eRaXf16SavEnP2oZ/exec"; 
+
+    const video = document.getElementById('video');
+    const status = document.getElementById('status');
+    const menuButtons = document.getElementById('menu-buttons');
+    const btnCancel = document.getElementById('btn-cancel');
+    
+    let knownFaces = [];
+    let currentMode = ""; 
+    let scanInterval = null;
+    let isProcessing = false;
+
+    // 1. กดปุ่มเพื่อเริ่มระบบ
+    async function startSystem(mode) {
+      try {
+        currentMode = mode;
+        menuButtons.style.display = 'none';
+        btnCancel.style.display = 'inline-block';
+        video.style.display = 'block';
+        status.innerText = `กำลังเตรียมกล้องสำหรับ "${mode}"...`;
+        status.style.color = "#ffffff";
+
+        // เปิดกล้อง
+        const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+        video.srcObject = stream;
+        
+        status.innerText = "กำลังเชื่อมต่อฐานข้อมูลพนักงาน...";
+        
+        // โหลด AI Model
+        const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+        await Promise.all([
+          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+        ]);
+
+        // ดึงข้อมูล
+        const response = await fetch(WEB_APP_URL, { 
+          method: 'POST', 
+          body: JSON.stringify({action: 'getKnownFaces'}) 
+        });
+        const resData = await response.json();
+        knownFaces = resData.map(u => ({ name: u.label, descriptor: new Float32Array(u.descriptor) }));
+
+        status.innerText = `พร้อมสแกน! กรุณามองกล้องเพื่อ${mode}`;
+        status.style.color = "#a5d6a7"; // สีเขียวอ่อน
+        isProcessing = false;
+        startScanning();
+
+      } catch (err) {
+        alert("ไม่สามารถเปิดกล้องได้ โปรดตรวจสอบการอนุญาตใช้งานกล้อง");
+        status.innerText = "ผิดพลาด: ไม่สามารถเปิดกล้องได้";
+        status.style.color = "#ef9a9a"; // สีแดงอ่อน
+        console.error(err);
+      }
+    }
+
+    // 2. สแกนหาใบหน้า
+    function startScanning() {
+      if(scanInterval) clearInterval(scanInterval);
+      scanInterval = setInterval(async () => {
+        if (isProcessing) return; 
+        if (typeof faceapi === 'undefined') return;
+
+        const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+        if (detection) {
+          let bestMatch = { name: "unknown", distance: 1.0 };
+          knownFaces.forEach(u => {
+            const dist = faceapi.euclideanDistance(detection.descriptor, u.descriptor);
+            if (dist < bestMatch.distance) bestMatch = { name: u.name, distance: dist };
+          });
+
+          if (bestMatch.distance < 0.45) {
+            isProcessing = true; 
+            clearInterval(scanInterval);
+            saveAttendance(bestMatch.name);
+          } else {
+            status.innerText = "ไม่พบประวัติพนักงานในระบบ";
+            status.style.color = "#ffcc80"; // สีส้มอ่อน
+          }
+        }
+      }, 800);
+    }
+
+    // 3. บันทึกข้อมูล
+    function saveAttendance(empName) {
+      status.innerText = `พบคุณ ${empName} | กำลังบันทึก${currentMode}...`;
+      status.style.color = "#81c784"; // สีเขียว
+
+      fetch(WEB_APP_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({ action: 'log', name: empName, type: currentMode, lat: "-", lng: "-" })
+      }).then(() => {
+        alert(`บันทึกเวลา${currentMode}\nชื่อพนักงาน: ${empName}\nทำรายการสำเร็จ!`);
+        resetSystem();
+      }).catch(err => {
+        alert("ส่งข้อมูลไม่สำเร็จ กรุณาลองใหม่");
+        resetSystem();
+      });
+    }
+
+    // 4. ยกเลิกและกลับหน้าแรก
+    function resetSystem() {
+      if(scanInterval) clearInterval(scanInterval);
+      if(video.srcObject) video.srcObject.getTracks().forEach(track => track.stop()); 
+      
+      video.style.display = 'none';
+      menuButtons.style.display = 'flex';
+      btnCancel.style.display = 'none';
+      status.innerText = "กรุณาเลือกทำรายการ";
+      status.style.color = "#ffffff";
+      isProcessing = false;
+    }
+  </script>
+</body>
+</html>
