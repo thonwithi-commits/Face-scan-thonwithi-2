@@ -9,528 +9,300 @@
   <style>
     body { 
       font-family: 'Sarabun', sans-serif; 
-      margin: 0; 
-      padding: 0;
-      min-height: 100vh; 
-      display: flex; 
-      flex-direction: column; 
-      align-items: center; 
-      justify-content: center; 
+      margin: 0; padding: 0; min-height: 100vh; 
+      display: flex; flex-direction: column; align-items: center; justify-content: center; 
       background: linear-gradient(135deg, #3e2723 0%, #5d4037 50%, #8d6e63 100%);
-      background-attachment: fixed;
-      color: #ffffff;
-      overflow-x: hidden;
-      overflow-y: auto;
-      padding: 20px 0;
+      color: #ffffff; overflow: hidden;
     }
-
-    body::before {
-      content: "";
-      position: absolute;
-      top: -50%; left: -50%; width: 200%; height: 200%;
-      background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 60%);
-      animation: rotate 40s linear infinite;
-      z-index: -1;
-    }
-    @keyframes rotate { 100% { transform: rotate(360deg); } }
-
     .glass-card { 
-      background: rgba(255, 255, 255, 0.1); 
-      backdrop-filter: blur(16px); 
-      -webkit-backdrop-filter: blur(16px);
+      background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.2); 
       box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); 
-      border-radius: 24px; 
-      width: 90%; 
-      max-width: 600px; 
-      padding: 30px 20px;
-      text-align: center;
-      position: relative;
-      z-index: 1;
-      margin: auto;
+      border-radius: 24px; width: 90%; max-width: 500px; padding: 30px 20px;
+      text-align: center; position: relative;
     }
-
-    .brand-logo {
-      max-width: 150px;
-      height: auto;
-      margin: 0 auto 15px auto;
-      display: block;
-      filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.3));
+    .brand-logo { max-width: 140px; margin: 0 auto 10px auto; display: block; filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.3)); }
+    #time { font-size: 48px; font-weight: 600; margin: 0; }
+    
+    #status { 
+      font-size: 16px; font-weight: 600; background: rgba(0, 0, 0, 0.4);
+      padding: 10px 15px; border-radius: 12px; margin: 15px 0; border: 1px solid rgba(255,255,255,0.1);
+      color: #ffc107;
     }
-
-    .clock-container { margin-bottom: 20px; }
-    #time { font-size: 48px; font-weight: 600; letter-spacing: 1px; text-shadow: 2px 2px 4px rgba(0,0,0,0.4); margin: 0; line-height: 1; }
-    #date { font-size: 16px; color: rgba(255,255,255,0.8); margin-top: 5px; font-weight: 300; }
 
     .video-container {
-      position: relative;
-      width: 100%;
-      max-width: 400px;
-      height: 300px;
-      margin: 0 auto 15px auto;
-      border-radius: 16px;
-      overflow: hidden;
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-      background: #000;
-      display: none;
+      width: 100%; max-width: 350px; height: 260px; margin: 0 auto 15px auto;
+      border-radius: 16px; overflow: hidden; border: 2px solid rgba(255, 255, 255, 0.3);
+      display: none; background: #000; position: relative;
     }
-
-    video { 
-      width: 100%; 
-      height: 100%;
-      object-fit: cover;
-      transform: scale(1.7) scaleX(-1); 
-      display: block;
-    }
-
-    #status { 
-      font-size: 16px; 
-      font-weight: 600; 
-      color: #fff; 
-      min-height: 20px; 
-      background: rgba(0, 0, 0, 0.25);
-      padding: 10px 15px;
-      border-radius: 12px;
-      margin-bottom: 20px;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .progress-dots {
-      display: none;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-    .dot {
-      width: 12px; height: 12px;
-      background: rgba(255,255,255,0.2);
-      border-radius: 50%;
-      transition: all 0.3s ease;
-    }
-    .dot.active { background: #81c784; box-shadow: 0 0 10px #81c784; }
-
+    video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+    
     .btn-container { display: flex; flex-direction: column; gap: 12px; width: 100%; }
-    .btn-row { display: flex; gap: 12px; width: 100%; justify-content: center; }
-    
+    .btn-row { display: flex; gap: 12px; }
     .btn { 
-      position: relative;
-      border: 1px solid rgba(255, 255, 255, 0.15); 
-      border-radius: 16px; 
-      font-size: 18px; 
-      font-weight: 600; 
-      cursor: pointer; 
-      color: white; 
-      flex: 1; 
-      min-width: 120px; 
-      padding: 16px;
-      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-      font-family: 'Sarabun', sans-serif;
-      -webkit-tap-highlight-color: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; padding: 18px;
+      font-size: 20px; font-weight: 600; cursor: pointer; color: white; flex: 1;
+      transition: 0.3s; font-family: 'Sarabun', sans-serif;
     }
-
-    .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.2); }
-    .btn:active { transform: translateY(0px) scale(0.97); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-    
+    .btn:active { transform: scale(0.95); }
     .btn-in { background: rgba(40, 167, 69, 0.85); }
     .btn-out { background: rgba(220, 53, 69, 0.85); }
-    .btn-manual { background: rgba(141, 110, 99, 0.85); width: 100%; font-size: 16px; padding: 14px; }
-    .btn-admin { background: rgba(30, 30, 30, 0.85); width: 100%; font-size: 16px; padding: 14px; }
-    .btn-capture { background: rgba(0, 123, 255, 0.85); width: 100%; font-size: 18px; padding: 18px; }
-    
-    .btn-cancel { 
-      background: rgba(255, 255, 255, 0.15); 
-      margin-top: 15px; 
-      width: 100%; 
-      font-size: 16px; 
-      padding: 14px;
-      display: none; 
-      backdrop-filter: blur(10px);
-    }
+    .btn-admin { background: rgba(30, 30, 30, 0.85); font-size: 14px; padding: 12px; margin-top: 10px; }
+    .btn-cancel { display: none; background: rgba(255,255,255,0.2); margin-top: 10px; font-size: 16px; width: 100%; }
 
-    #register-ui { display: none; width: 100%; }
-    .input-field {
-      width: 85%;
-      padding: 12px;
-      margin-bottom: 15px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.4);
-      background: rgba(255,255,255,0.1);
-      backdrop-filter: blur(10px);
-      color: white;
-      font-size: 18px;
-      font-family: 'Sarabun', sans-serif;
-      text-align: center;
-      outline: none;
-    }
-
-    /* --- ส่วนของ Custom Modal (กล่องแจ้งเตือนแบบใหม่) --- */
+    /* Custom Modal */
     .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
-      backdrop-filter: blur(8px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      opacity: 0;
-      transition: opacity 0.3s ease;
+      position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 1000;
     }
-    .modal-content {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      padding: 30px;
-      border-radius: 20px;
-      max-width: 400px;
-      width: 80%;
-      text-align: center;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-      transform: translateY(20px);
-      transition: transform 0.3s ease;
-    }
-    .modal-overlay.show { display: flex; opacity: 1; }
-    .modal-overlay.show .modal-content { transform: translateY(0); }
-    .modal-message { font-size: 20px; font-weight: 400; margin-bottom: 25px; line-height: 1.5; color: #fff; }
-    .modal-btn {
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.4);
-      padding: 12px 30px;
-      border-radius: 12px;
-      color: white;
-      font-size: 18px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .modal-btn:hover { background: rgba(255, 255, 255, 0.3); }
+    .modal-content { background: rgba(255,255,255,0.15); padding: 30px; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.2); width: 80%; max-width: 350px; }
+    .modal-btn { background: #ffc107; padding: 10px 30px; border-radius: 10px; border: none; cursor: pointer; margin-top: 20px; font-weight: 600; font-size: 16px;}
 
-    @media (max-height: 800px) {
-      .glass-card { padding: 20px 15px; }
-      #time { font-size: 40px; }
-      .btn { padding: 14px; font-size: 16px; }
-      .video-container { height: 250px; }
-    }
+    #register-ui { display: none; margin-top: 15px; }
+    .input-field { width: 90%; padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.2); color: white; margin-bottom: 10px; text-align: center; font-size: 18px; }
+    
+    #db-count { font-size: 12px; opacity: 0.6; margin-top: 10px; }
   </style>
 </head>
 <body>
 
-  <!-- โครงสร้างของ Custom Modal -->
-  <div class="modal-overlay" id="custom-modal">
-    <div class="modal-content">
-      <div class="modal-message" id="modal-text">ข้อความแจ้งเตือน</div>
-      <button class="modal-btn" onclick="closeMessage()">ตกลง</button>
-    </div>
+<div class="modal-overlay" id="custom-modal">
+  <div class="modal-content">
+    <div id="modal-text" style="font-size: 20px"></div>
+    <button class="modal-btn" onclick="closeMessage()">ตกลง</button>
+  </div>
+</div>
+
+<div class="glass-card">
+  <img src="indexlogo.png" class="brand-logo" onerror="this.style.display='none'">
+  <div id="time">00:00:00</div>
+  <div id="date" style="color: rgba(255,255,255,0.7); font-size: 14px;">วัน เดือน ปี</div>
+
+  <div class="video-container" id="video-box">
+    <video id="video" autoplay muted playsinline></video>
   </div>
 
-  <div class="glass-card">
-    <img src="indexlogo.png" alt="Thonwithi Logo" class="brand-logo" onerror="this.style.display='none';">
+  <div id="status">กำลังโหลดระบบ AI...</div>
 
-    <div class="clock-container">
-      <p id="time">00:00:00</p>
-      <p id="date">วัน เดือน ปี</p>
+  <div id="register-ui">
+    <input type="text" id="reg-name" placeholder="ชื่อพนักงาน (ให้ตรงกับแผ่นงาน Settings)" class="input-field">
+    <button class="btn btn-in" style="width: 100%" onclick="performCapture()">📸 บันทึกใบหน้า</button>
+  </div>
+
+  <div class="btn-container" id="menu-buttons" style="display:none;">
+    <div class="btn-row">
+      <button class="btn btn-in" onclick="startSystem('เข้างาน')">เข้างาน</button>
+      <button class="btn btn-out" onclick="startSystem('ออกงาน')">ออกงาน</button>
     </div>
+    <button class="btn btn-admin" onclick="checkAdmin()">ลงทะเบียนพนักงาน (Admin Only)</button>
+  </div>
+
+  <button class="btn btn-cancel" id="btn-cancel" onclick="resetSystem()">ย้อนกลับ / ยกเลิก</button>
+  
+  <div id="db-count">พนักงานในระบบ: 0 คน</div>
+</div>
+
+<script>
+  // --- ก๊อปปี้ URL เว็บแอปของคุณมาใส่ตรงนี้ ---
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwBd8OsZFF2i44KrfCnGI7c9idmDakwWEgse9qt_WDOD5OOxG13eRaXf16SavEnP2oZ/exec";
+  const ADMIN_PASSWORD = "123";
+
+  let knownFaces = [];
+  let isProcessing = false;
+  let scanInterval = null;
+  let currentMode = "";
+
+  window.onload = async () => {
+    updateClock(); setInterval(updateClock, 1000);
+    const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
     
-    <div class="video-container" id="video-box">
-      <video id="video" autoplay muted playsinline></video>
-    </div>
-
-    <div id="status">กำลังโหลดระบบ...</div>
-
-    <div class="progress-dots" id="reg-progress">
-      <div class="dot"></div>
-      <div class="dot"></div>
-    </div>
-
-    <div id="register-ui">
-      <input type="text" id="reg-name" placeholder="ระบุชื่อพนักงาน หรือ รหัส" class="input-field">
-      <div class="btn-container" id="reg-btns">
-        <button class="btn btn-in" style="width: 100%;" onclick="startManualRegistration()">เริ่มบันทึกใบหน้า (2 มุม)</button>
-        <button class="btn btn-admin" style="width: 100%; background: rgba(121, 85, 72, 0.9); margin-top: 10px;" onclick="registerIdOnly()">ลงทะเบียนเฉพาะรหัส (Manual)</button>
-      </div>
-      <div id="capture-ui" style="display:none; margin-top: 10px;">
-        <button id="capture-btn" class="btn btn-capture" onclick="performCapture()">บันทึกภาพ</button>
-      </div>
-    </div>
-
-    <div class="btn-container" id="menu-buttons" style="display:none;">
-      <div class="btn-row">
-        <button class="btn btn-in" onclick="startSystem('เข้างาน')">สแกนเข้างาน</button>
-        <button class="btn btn-out" onclick="startSystem('ออกงาน')">สแกนออกงาน</button>
-      </div>
-      <button class="btn btn-manual" onclick="manualLog()">ลงเวลาด้วยรหัสพนักงาน</button>
-      <button class="btn btn-admin" onclick="checkAdmin()">ลงทะเบียนพนักงาน (Admin)</button>
-    </div>
-
-    <button id="btn-cancel" class="btn btn-cancel" onclick="resetSystem()">ย้อนกลับไปหน้าแรก</button>
-  </div>
-
-  <script>
-    const ADMIN_PASSWORD = "123"; 
-    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwBd8OsZFF2i44KrfCnGI7c9idmDakwWEgse9qt_WDOD5OOxG13eRaXf16SavEnP2oZ/exec"; 
-
-    let modelsLoaded = false;
-    let knownFaces = [];
-    let currentMode = ""; 
-    let scanInterval = null;
-    let isProcessing = false;
-
-    // ฟังก์ชันแสดงกล่องแจ้งเตือนแบบกำหนดเอง
-    function showMessage(text) {
-      const modal = document.getElementById('custom-modal');
-      const modalText = document.getElementById('modal-text');
-      modalText.innerText = text;
-      modal.classList.add('show');
+    try {
+      await Promise.all([
+        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
+      ]);
+      await fetchDatabase();
+      
+      document.getElementById('menu-buttons').style.display = 'flex';
+      document.getElementById('status').innerText = "✅ ระบบพร้อมใช้งาน";
+      document.getElementById('status').style.color = "#81c784";
+    } catch (e) {
+      document.getElementById('status').innerText = "❌ เกิดข้อผิดพลาดในการโหลดระบบ";
+      console.error(e);
     }
+  };
 
-    function closeMessage() {
-      const modal = document.getElementById('custom-modal');
-      modal.classList.remove('show');
-    }
-
-    let regStep = 0;
-    let regDescriptors = [];
-    const regInstructions = [
-      "กรุณามองตรง แล้วกดบันทึกภาพ",
-      "กรุณาเอียงหน้าเล็กน้อย แล้วกดบันทึกภาพ"
-    ];
-
-    window.onload = async () => {
-      updateClock();
-      setInterval(updateClock, 1000);
-      const statusEl = document.getElementById('status');
-      try {
-        const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-        statusEl.innerText = "กำลังโหลด AI Model...";
-        await Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-        ]);
-        modelsLoaded = true;
-        fetchDatabase(); 
-        document.getElementById('menu-buttons').style.display = 'flex';
-        statusEl.innerText = "กรุณาเลือกทำรายการ";
-      } catch (e) {
-        statusEl.innerText = "ผิดพลาด: โหลดข้อมูลไม่สำเร็จ";
-      }
-    };
-
-    async function fetchDatabase() {
-      try {
-        const response = await fetch(WEB_APP_URL, { 
-          method: 'POST', 
-          body: JSON.stringify({action: 'getKnownFaces'}) 
-        });
-        const resData = await response.json();
-        knownFaces = resData.map(u => ({ name: u.label, descriptor: new Float32Array(u.descriptor) }));
-      } catch (e) { console.error("Fetch DB Error:", e); }
-    }
-
-    function updateClock() {
-      const now = new Date();
-      const optionsTime = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
-      const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-      document.getElementById('time').innerText = now.toLocaleTimeString('th-TH', optionsTime);
-      document.getElementById('date').innerText = now.toLocaleDateString('th-TH', optionsDate);
-    }
-
-    function manualLog() {
-      const empId = prompt("กรุณาระบุรหัสพนักงาน (เช่น A1001):");
-      if (!empId) return;
-      const mode = confirm("ตกลง = เข้างาน / ยกเลิก = ออกงาน");
-      const typeLabel = mode ? "เข้างาน" : "ออกงาน";
-      document.getElementById('status').innerText = `กำลังบันทึกข้อมูลสำหรับ ${empId}...`;
-      fetch(WEB_APP_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: JSON.stringify({ action: 'log', name: empId + " (Manual)", type: typeLabel, lat: "-", lng: "-" })
-      }).then(() => {
-        showMessage(`บันทึก ${typeLabel} สำหรับรหัส ${empId} สำเร็จ!`);
-        resetSystem();
-      }).catch(err => showMessage("เกิดข้อผิดพลาดในการเชื่อมต่อ"));
-    }
-
-    async function startSystem(mode) {
-      if (!modelsLoaded) { showMessage("ระบบกำลังโหลด... กรุณารอสักครู่"); return; }
-      const statusEl = document.getElementById('status');
-      try {
-        currentMode = mode;
-        document.getElementById('menu-buttons').style.display = 'none';
-        document.getElementById('btn-cancel').style.display = 'inline-block';
-        document.getElementById('video-box').style.display = 'block';
-        
-        statusEl.innerText = "กำลังเปิดกล้อง...";
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-        const videoEl = document.getElementById('video');
-        videoEl.srcObject = stream;
-        videoEl.play(); 
-
-        if (knownFaces.length === 0) {
-          statusEl.innerText = "กำลังดึงข้อมูลพนักงาน...";
-          await fetchDatabase();
-        }
-
-        statusEl.innerText = `พร้อมสแกน! กรุณามองกล้องเพื่อ${mode}`;
-        statusEl.style.color = "#a5d6a7"; 
-        isProcessing = false;
-        startScanning();
-      } catch (err) {
-        showMessage("ไม่สามารถเปิดกล้องได้: " + err.message);
-        resetSystem();
-      }
-    }
-
-    function startScanning() {
-      if(scanInterval) clearInterval(scanInterval);
-      const videoEl = document.getElementById('video');
-      scanInterval = setInterval(async () => {
-        if (isProcessing) return; 
-        const detection = await faceapi.detectSingleFace(videoEl).withFaceLandmarks().withFaceDescriptor();
-        if (detection) {
-          let bestMatch = { name: "unknown", distance: 1.0 };
-          knownFaces.forEach(u => {
-            const dist = faceapi.euclideanDistance(detection.descriptor, u.descriptor);
-            if (dist < bestMatch.distance) bestMatch = { name: u.name, distance: dist };
-          });
-          
-          if (bestMatch.distance < 0.55) {
-            isProcessing = true; 
-            clearInterval(scanInterval);
-            saveAttendance(bestMatch.name);
-          } else {
-            document.getElementById('status').innerText = `ไม่พบข้อมูล (Distance: ${bestMatch.distance.toFixed(2)})`;
-            document.getElementById('status').style.color = "#ffcc80"; 
-          }
-        }
-      }, 700);
-    }
-
-    function saveAttendance(empName) {
-      document.getElementById('status').innerText = `พบคุณ ${empName} | กำลังบันทึก...`;
-      fetch(WEB_APP_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: JSON.stringify({ action: 'log', name: empName, type: currentMode, lat: "-", lng: "-" })
-      }).then(() => {
-        showMessage(`บันทึกเวลา ${currentMode} สำเร็จ!`);
-        resetSystem();
+  // ดึงข้อมูลใบหน้าจาก Google Sheet (แบบปลอดภัย ไม่ใช้ no-cors)
+  async function fetchDatabase() {
+    document.getElementById('status').innerText = "กำลังซิงค์ข้อมูล...";
+    try {
+      const res = await fetch(WEB_APP_URL, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({action: 'getKnownFaces'}) 
       });
+      const data = await res.json();
+      
+      // แปลงข้อมูลให้ AI รู้จัก
+      knownFaces = data.map(u => ({ 
+        name: u.label, 
+        descriptor: new Float32Array(u.descriptor) 
+      }));
+      
+      document.getElementById('db-count').innerText = `พนักงานในระบบ: ${knownFaces.length} คน`;
+      document.getElementById('status').innerText = "กรุณาเลือกทำรายการ";
+    } catch (error) {
+      document.getElementById('status').innerText = "เชื่อมต่อฐานข้อมูลล้มเหลว";
     }
+  }
 
-    function checkAdmin() {
-      const pass = prompt("กรุณาใส่รหัสผ่าน Admin:");
-      if (pass === ADMIN_PASSWORD) {
-        document.getElementById('menu-buttons').style.display = 'none';
-        document.getElementById('btn-cancel').style.display = 'inline-block';
-        document.getElementById('register-ui').style.display = 'block';
-        document.getElementById('video-box').style.display = 'none'; 
-        document.getElementById('status').innerText = "โหมด Admin: ระบุชื่อพนักงาน";
-      } else if (pass !== null) showMessage("รหัสผ่านไม่ถูกต้อง!");
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('time').innerText = now.toLocaleTimeString('th-TH', {hour12:false});
+    document.getElementById('date').innerText = now.toLocaleDateString('th-TH', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  }
+
+  async function startSystem(mode) {
+    if(knownFaces.length === 0) {
+      showMessage("ยังไม่มีข้อมูลพนักงานในระบบ กรุณาลงทะเบียนก่อน");
+      return;
     }
-
-    async function startManualRegistration() {
-      const nameInput = document.getElementById('reg-name').value.trim();
-      if (!nameInput) { showMessage("กรุณาระบุชื่อพนักงาน"); return; }
-      
-      regStep = 0;
-      regDescriptors = [];
-      document.getElementById('reg-btns').style.display = 'none';
-      document.getElementById('reg-progress').style.display = 'flex';
-      document.getElementById('capture-ui').style.display = 'block';
-      document.getElementById('video-box').style.display = 'block';
-      
-      const dots = document.querySelectorAll('.dot');
-      dots.forEach(d => d.classList.remove('active'));
-
-      try {
-        document.getElementById('status').innerText = "กำลังเปิดกล้อง...";
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
-        const videoEl = document.getElementById('video');
-        videoEl.srcObject = stream;
-        videoEl.play();
-        document.getElementById('status').innerText = regInstructions[regStep];
-      } catch (e) {
-        showMessage("เปิดกล้องล้มเหลว");
-        resetSystem();
-      }
+    
+    currentMode = mode;
+    document.getElementById('menu-buttons').style.display = 'none';
+    document.getElementById('video-box').style.display = 'block';
+    document.getElementById('btn-cancel').style.display = 'block';
+    document.getElementById('status').innerText = `กำลังเปิดกล้อง เพื่อสแกน${mode}...`;
+    document.getElementById('status').style.color = "#fff";
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      document.getElementById('video').srcObject = stream;
+      isProcessing = false;
+      startScanning();
+    } catch(err) {
+      showMessage("ไม่สามารถเปิดกล้องได้");
+      resetSystem();
     }
+  }
 
-    async function performCapture() {
-      const videoEl = document.getElementById('video');
-      const statusEl = document.getElementById('status');
+  function startScanning() {
+    const video = document.getElementById('video');
+    scanInterval = setInterval(async () => {
+      if (isProcessing) return;
       
-      statusEl.innerText = "กำลังตรวจจับใบหน้า...";
-      const detection = await faceapi.detectSingleFace(videoEl).withFaceLandmarks().withFaceDescriptor();
-      
+      const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
       if (detection) {
-        regDescriptors.push(Array.from(detection.descriptor));
-        document.querySelectorAll('.dot')[regStep].classList.add('active');
-        regStep++;
+        let bestMatch = { name: 'unknown', distance: 1.0 };
+        
+        // เปรียบเทียบใบหน้า
+        knownFaces.forEach(u => {
+          const dist = faceapi.euclideanDistance(detection.descriptor, u.descriptor);
+          if (dist < bestMatch.distance) bestMatch = { name: u.name, distance: dist };
+        });
 
-        if (regStep < 2) {
-          statusEl.innerText = regInstructions[regStep];
+        // Threshold = 0.58 (ยิ่งน้อยยิ่งเข้มงวด ปรับขึ้นเพื่อให้แสกนง่ายขึ้น)
+        if (bestMatch.distance < 0.58) {
+          isProcessing = true; 
+          clearInterval(scanInterval);
+          saveLog(bestMatch.name);
         } else {
-          finalizeRegistration();
+          document.getElementById('status').innerText = `ใบหน้าไม่ตรงกัน (ความคลาดเคลื่อน: ${bestMatch.distance.toFixed(2)})`;
+          document.getElementById('status').style.color = "#ff5252";
         }
       } else {
-        showMessage("ไม่พบใบหน้า! กรุณามองที่กล้องให้ชัดเจนและอยู่นิ่งๆ");
-        statusEl.innerText = regInstructions[regStep];
+        document.getElementById('status').innerText = `กำลังค้นหาใบหน้า... กรุณามองกล้อง`;
+        document.getElementById('status').style.color = "#fff";
       }
-    }
+    }, 800);
+  }
 
-    function finalizeRegistration() {
-      const nameInput = document.getElementById('reg-name').value.trim();
-      document.getElementById('status').innerText = "ครบ 2 มุม! กำลังส่งข้อมูล...";
-      document.getElementById('capture-ui').style.display = 'none';
+  function saveLog(name) {
+    document.getElementById('status').innerText = `พบคุณ: ${name} กำลังบันทึก...`;
+    fetch(WEB_APP_URL, { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({action:'log', name: name, type: currentMode, lat: "", lng: ""}) 
+    })
+    .then(() => { 
+      showMessage(`บันทึก ${currentMode} สำเร็จ\nสวัสดีคุณ ${name}`); 
+      stopCamera();
+    })
+    .catch(() => {
+      showMessage(`เครือข่ายมีปัญหา กรุณาลองใหม่`);
+      resetSystem();
+    });
+  }
+
+  function checkAdmin() {
+    const pass = prompt("รหัสผ่าน Admin:");
+    if (pass === ADMIN_PASSWORD) {
+      document.getElementById('menu-buttons').style.display = 'none';
+      document.getElementById('register-ui').style.display = 'block';
+      document.getElementById('video-box').style.display = 'block';
+      document.getElementById('btn-cancel').style.display = 'block';
+      document.getElementById('status').innerText = "กรุณาพิมพ์ชื่อ และกดปุ่มบันทึกใบหน้า";
       
-      const averagedDescriptor = regDescriptors[0].map((_, i) => 
-        regDescriptors.reduce((sum, d) => sum + d[i], 0) / regDescriptors.length
-      );
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+        .then(s => document.getElementById('video').srcObject = s);
+    }
+  }
 
-      fetch(WEB_APP_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: JSON.stringify({ action: 'register', name: nameInput, descriptor: averagedDescriptor })
-      }).then(() => {
-        setTimeout(async () => {
-          await fetchDatabase();
-          showMessage(`ลงทะเบียนพนักงาน: "${nameInput}" สำเร็จ!`);
-          resetSystem();
-        }, 1500);
+  async function performCapture() {
+    const name = document.getElementById('reg-name').value.trim();
+    if(!name) { showMessage("กรุณาพิมพ์ชื่อพนักงานก่อนครับ"); return; }
+    
+    document.getElementById('status').innerText = "กำลังวิเคราะห์ใบหน้า อยู่นิ่งๆ...";
+    const video = document.getElementById('video');
+    const detection = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+    
+    if (detection) {
+      const descriptorArray = Array.from(detection.descriptor); // แปลงเป็น Array ธรรมดาให้ Google Sheet เข้าใจง่าย
+      
+      document.getElementById('status').innerText = "กำลังส่งข้อมูลไปที่ระบบ...";
+      fetch(WEB_APP_URL, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({action:'register', name: name, descriptor: descriptorArray}) 
+      })
+      .then(() => { 
+        showMessage(`ลงทะเบียนคุณ ${name} สำเร็จ!`); 
+        stopCamera();
+        fetchDatabase(); // ดึงข้อมูลใหม่ทันที
       });
+    } else {
+      showMessage("ไม่พบใบหน้า กรุณาถอดแมสก์และมองกล้องให้ชัดเจน");
     }
+  }
 
-    function registerIdOnly() {
-      const nameInput = document.getElementById('reg-name').value.trim();
-      if (!nameInput) { showMessage("กรุณาระบุรหัสพนักงาน"); return; }
-      fetch(WEB_APP_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        body: JSON.stringify({ action: 'register', name: nameInput + " (Manual)", descriptor: [] })
-      }).then(() => {
-        setTimeout(async () => { await fetchDatabase(); showMessage(`ลงทะเบียนรหัสสำเร็จ!`); resetSystem(); }, 1000);
-      });
+  function stopCamera() {
+    if(scanInterval) clearInterval(scanInterval);
+    const video = document.getElementById('video');
+    if(video.srcObject) {
+      video.srcObject.getTracks().forEach(track => track.stop());
     }
+  }
 
-    function resetSystem() {
-      if(scanInterval) clearInterval(scanInterval);
-      const videoEl = document.getElementById('video');
-      if(videoEl.srcObject) videoEl.srcObject.getTracks().forEach(track => track.stop()); 
-      document.getElementById('video-box').style.display = 'none';
-      document.getElementById('register-ui').style.display = 'none';
-      document.getElementById('reg-progress').style.display = 'none';
-      document.getElementById('capture-ui').style.display = 'none';
-      document.getElementById('reg-btns').style.display = 'block';
-      document.getElementById('menu-buttons').style.display = 'flex';
-      document.getElementById('btn-cancel').style.display = 'none';
-      document.getElementById('reg-name').value = ''; 
-      document.getElementById('status').innerText = "กรุณาเลือกทำรายการ";
-      document.getElementById('status').style.color = "#ffffff";
-      isProcessing = false;
+  function showMessage(t) { document.getElementById('modal-text').innerText = t; document.getElementById('custom-modal').style.display = 'flex'; }
+  function closeMessage() { 
+    document.getElementById('custom-modal').style.display = 'none'; 
+    if(isProcessing || document.getElementById('register-ui').style.display === 'block') {
+      resetSystem();
     }
-  </script>
+  }
+  
+  function resetSystem() { 
+    stopCamera();
+    document.getElementById('video-box').style.display = 'none';
+    document.getElementById('register-ui').style.display = 'none';
+    document.getElementById('btn-cancel').style.display = 'none';
+    document.getElementById('menu-buttons').style.display = 'flex';
+    document.getElementById('status').innerText = "กรุณาเลือกทำรายการ";
+    document.getElementById('status').style.color = "#fff";
+    document.getElementById('reg-name').value = "";
+    isProcessing = false;
+  }
+</script>
 </body>
 </html>
