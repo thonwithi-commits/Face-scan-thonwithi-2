@@ -1,113 +1,478 @@
-/**
- * ฟังก์ชันหลักสำหรับรับข้อมูลจากแอป iPad (index.html) และหน้าจัดการ (payroll.html)
- */
-function doPost(e) {
-  var data = JSON.parse(e.postData.contents);
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  
-  // --- 1. ส่วนบันทึกข้อมูล (แอปเครื่องแสกน) ---
-  
-  // บันทึกเวลาเข้า-ออกงาน
-  if (data.action == 'log') {
-    var sheet = ss.getSheetByName('Logs');
-    // หากไม่มีชีต Logs ให้สร้างขึ้นมาอัตโนมัติ
-    if (!sheet) {
-      sheet = ss.insertSheet('Logs');
-      sheet.appendRow(['Timestamp', 'Name', 'Type', 'Lat', 'Lng']);
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thonwithi Payroll - ระบบจัดการเงินเดือน</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
+  <!-- นำเข้าไลบรารีสำหรับแปลง HTML เป็น รูปภาพ -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --primary: #8d6e63;
+      --accent: #ffc107;
+      --danger: #ff5252;
+      --warning: #ff9800;
+      --success: #81c784;
+      --glass: rgba(255, 255, 255, 0.1);
     }
-    sheet.appendRow([new Date(), data.name, data.type, data.lat, data.lng]);
-    return ContentService.createTextOutput("Success");
-  }
-  
-  // ลงทะเบียนใบหน้าพนักงานใหม่
-  if (data.action == 'register') {
-    var sheet = ss.getSheetByName('Users');
-    if (!sheet) {
-      sheet = ss.insertSheet('Users');
-      sheet.appendRow(['Name', 'Descriptor']);
+    body { 
+      font-family: 'Sarabun', sans-serif; 
+      margin: 0; padding: 0;
+      background: linear-gradient(135deg, #2b1b17 0%, #3e2723 100%);
+      color: white; min-height: 100vh;
     }
-    sheet.appendRow([data.name, JSON.stringify(data.descriptor)]);
-    return ContentService.createTextOutput("Success");
-  }
-
-  // --- 2. ส่วนดึงข้อมูล (หน้า Payroll Dashboard) ---
-
-  // ดึงประวัติการลงเวลาทั้งหมด
-  if (data.action == 'getLogs') {
-    var sheet = ss.getSheetByName('Logs');
-    if (!sheet) return returnJson([]);
-    var rows = sheet.getDataRange().getValues();
-    var logs = rows.slice(1).map(function(r) {
-      return {
-        timestamp: Utilities.formatDate(new Date(r[0]), "GMT+7", "yyyy-MM-dd HH:mm:ss"),
-        name: r[1],
-        type: r[2]
-      };
-    });
-    return returnJson(logs);
-  }
-
-  // ดึงรายชื่อพนักงานและตั้งค่าอัตราจ้าง/เวลาเข้างาน (จากชีต Settings)
-  if (data.action == 'getEmployeeSettings') {
-    var sheet = ss.getSheetByName('Settings');
-    if (!sheet) return returnJson([]);
-    var rows = sheet.getDataRange().getValues();
-    var settings = rows.slice(1).map(function(r) {
-      return {
-        name: r[0],
-        dept: r[1],
-        empType: r[2], // "รายวัน" หรือ "รายชั่วโมง"
-        rate: r[3],
-        startTime: r[4], // เวลาเข้างานปกติ เช่น "08:00"
-        advance: r[5] || 0 // ดึงยอดเบิกล่วงหน้า (คอลัมน์ F)
-      };
-    });
-    return returnJson(settings);
-  }
-
-  // อัปเดตยอดเบิกล่วงหน้าจากหน้าเว็บ
-  if (data.action == 'updateAdvance') {
-    var sheet = ss.getSheetByName('Settings');
-    if (!sheet) return returnJson({status: "error", message: "ไม่พบแผ่นงาน Settings"});
-    var rows = sheet.getDataRange().getValues();
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
     
-    // วนหาชื่อพนักงานที่ตรงกัน
-    for (var i = 1; i < rows.length; i++) {
-      if (rows[i][0].toString().trim() === data.name.trim()) {
-        // อัปเดตยอดเงินในคอลัมน์ F (คอลัมน์ที่ 6)
-        sheet.getRange(i + 1, 6).setValue(data.advance);
-        break;
+    #login-screen { display: flex; align-items: center; justify-content: center; height: 80vh; }
+    .glass-box {
+      background: var(--glass); backdrop-filter: blur(15px);
+      border: 1px solid rgba(255,255,255,0.2); border-radius: 24px;
+      padding: 40px; width: 100%; max-width: 350px; text-align: center;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    #admin-content { display: none; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    
+    .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+    .tab {
+      padding: 12px 20px; background: rgba(255,255,255,0.1); border-radius: 12px;
+      cursor: pointer; transition: 0.3s; white-space: nowrap; font-size: 14px;
+    }
+    .tab.active { background: var(--accent); color: #000; font-weight: 600; }
+
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .info-card { background: var(--glass); border-radius: 16px; padding: 15px; border-left: 4px solid var(--accent); }
+    .info-card small { opacity: 0.6; display: block; margin-bottom: 5px; }
+    .info-card strong { font-size: 20px; color: var(--accent); }
+
+    .data-card {
+      background: var(--glass); border-radius: 20px; padding: 20px;
+      border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 900px; }
+    th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    th { color: var(--accent); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+    
+    .btn { padding: 10px 20px; border-radius: 10px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; }
+    .btn-primary { background: var(--accent); color: black; }
+    .btn-secondary { background: rgba(255,255,255,0.2); color: white; }
+    .btn-slip { background: #4caf50; color: white; padding: 6px 12px; font-size: 12px; border-radius: 6px; }
+
+    .salary-tag { color: var(--success); font-weight: 600; }
+
+    #loading {
+      position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8);
+      display: none; align-items: center; justify-content: center; z-index: 2000; flex-direction: column; gap: 10px;
+    }
+
+    /* Template สำหรับทำสลิปเงินเดือน (ซ่อนไว้ไม่ให้โชว์บนจอหลัก) */
+    #slip-render-area {
+      position: absolute; left: -9999px; top: 0;
+    }
+    .slip-card {
+      width: 450px; background: #ffffff; color: #333; padding: 30px; 
+      font-family: 'Sarabun', sans-serif; border-radius: 0px;
+      box-sizing: border-box;
+    }
+    .slip-header { text-align: center; border-bottom: 2px dashed #ccc; padding-bottom: 15px; margin-bottom: 15px; }
+    .slip-title { font-size: 24px; font-weight: 600; color: #3e2723; margin: 0; }
+    .slip-subtitle { font-size: 14px; color: #666; margin: 5px 0 0 0; }
+    
+    .slip-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 16px; }
+    .slip-divider { border-bottom: 1px solid #eee; margin: 15px 0; }
+    .slip-total { font-size: 20px; font-weight: 600; color: #2e7d32; display: flex; justify-content: space-between; margin-top: 15px; padding-top: 15px; border-top: 2px solid #333; }
+    .slip-deduct { color: #d32f2f; }
+  </style>
+</head>
+<body>
+
+<div id="loading">
+  <div style="font-size: 24px;">กำลังประมวลผล...</div>
+  <div id="loading-text" style="font-size: 14px; opacity: 0.8;">โปรดรอสักครู่</div>
+</div>
+
+<div class="container">
+  <div id="login-screen">
+    <div class="glass-box">
+      <h2 style="margin-top:0">ระบบจัดการหลังบ้าน</h2>
+      <p style="opacity:0.7; font-size: 14px">กรุณาใส่รหัสผ่านเพื่อดูรายงานเงินเดือน</p>
+      <input type="password" id="admin-pass" placeholder="รหัสผ่าน Admin" style="width:100%; padding:12px; margin:20px 0; border-radius:10px; border:none; background:rgba(0,0,0,0.2); color:white; box-sizing:border-box; text-align:center;">
+      <button class="btn btn-primary" style="width: 100%" onclick="login()">เข้าสู่ระบบ</button>
+    </div>
+  </div>
+
+  <div id="admin-content">
+    <div class="header">
+      <div>
+        <h2 style="margin:0">Dashboard รายสัปดาห์</h2>
+        <p id="week-display" style="opacity:0.6; margin:5px 0 0 0; font-size: 14px;"></p>
+      </div>
+      <button class="btn btn-secondary" onclick="location.reload()">Log Out</button>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-card"><small>พนักงานทั้งหมด</small><strong id="stat-staff">0</strong> คน</div>
+      <div class="info-card"><small>ยอดจ่ายสัปดาห์นี้</small><strong id="stat-total">0.00</strong> ฿</div>
+      <div class="info-card"><small>โดนหักมาสายรวม</small><strong id="stat-late" style="color:var(--danger)">0</strong> ฿</div>
+      <div class="info-card"><small>เบิกล่วงหน้ารวม</small><strong id="stat-advance" style="color:var(--warning)">0</strong> ฿</div>
+    </div>
+
+    <div class="nav-tabs">
+      <div class="tab active" onclick="switchTab('payroll')">สรุปเงินเดือน (รายวัน/รายชั่วโมง)</div>
+      <div class="tab" onclick="switchTab('logs')">ประวัติแสกนจริง</div>
+      <div class="tab" onclick="switchTab('settings')">ตั้งค่าอัตราจ้าง & เวลาเข้างาน</div>
+    </div>
+
+    <div id="payroll-section" class="tab-content">
+      <div class="data-card">
+        <table id="payroll-table">
+          <thead>
+            <tr>
+              <th>พนักงาน</th>
+              <th>ประเภท</th>
+              <th>มาทำงาน</th>
+              <th>สายรวม (นาที)</th>
+              <th>ยอดสุทธิ (฿)</th>
+              <th>การจัดการ</th>
+            </tr>
+          </thead>
+          <tbody id="payroll-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="logs-section" class="tab-content" style="display:none">
+      <div class="data-card">
+        <table id="logs-table">
+          <thead>
+            <tr>
+              <th>วัน/เวลา</th>
+              <th>พนักงาน</th>
+              <th>ประเภท</th>
+            </tr>
+          </thead>
+          <tbody id="logs-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="settings-section" class="tab-content" style="display:none">
+      <div class="data-card">
+        <table id="settings-table">
+          <thead>
+            <tr>
+              <th>ชื่อ</th>
+              <th>แผนก</th>
+              <th>การจ้าง</th>
+              <th>อัตราจ้าง</th>
+              <th>เวลาเข้างาน</th>
+              <th>เบิกล่วงหน้า (ติดหนี้)</th>
+            </tr>
+          </thead>
+          <tbody id="settings-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- โครงสร้างใบสลิปเงินเดือน ที่จะถูกแปลงเป็นรูปภาพ -->
+<div id="slip-render-area">
+  <div class="slip-card" id="slip-template">
+    <div class="slip-header">
+      <h2 class="slip-title">Thonwithi Cafe</h2>
+      <p class="slip-subtitle">ใบแจ้งเงินเดือน / Payslip</p>
+      <p class="slip-subtitle" id="slip-date" style="margin-top:5px; font-weight:600;"></p>
+    </div>
+    
+    <div class="slip-row" style="margin-bottom: 20px;">
+      <div><strong>ชื่อพนักงาน:</strong> <span id="slip-name"></span></div>
+      <div><strong>แผนก:</strong> <span id="slip-dept"></span></div>
+    </div>
+
+    <div class="slip-row">
+      <span>รายได้จากการทำงาน (<span id="slip-work-unit"></span>)</span>
+      <span id="slip-gross">0.00 ฿</span>
+    </div>
+    
+    <div class="slip-divider"></div>
+    <div style="font-size: 14px; font-weight: 600; margin-bottom: 10px;">รายการหัก (Deductions)</div>
+    
+    <div class="slip-row slip-deduct">
+      <span>หักมาสาย (<span id="slip-late-min"></span> นาที)</span>
+      <span id="slip-late-pay">-0.00 ฿</span>
+    </div>
+    <div class="slip-row slip-deduct">
+      <span>หักเบิกล่วงหน้า</span>
+      <span id="slip-advance">-0.00 ฿</span>
+    </div>
+
+    <div class="slip-total">
+      <span>รายรับสุทธิ (Net Pay)</span>
+      <span id="slip-net">0.00 ฿</span>
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px; font-size: 12px; color: #888;">
+      ขอบคุณที่ตั้งใจทำงาน<br>Thonwithi Management
+    </div>
+  </div>
+</div>
+
+<script>
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwBd8OsZFF2i44KrfCnGI7c9idmDakwWEgse9qt_WDOD5OOxG13eRaXf16SavEnP2oZ/exec"; 
+  const ADMIN_PASS = "123";
+
+  let masterData = { logs: [], settings: [] };
+  let globalSummary = {}; 
+  let globalWeekText = "";
+
+  function showLoading(text = "กำลังประมวลผลข้อมูล...") {
+    document.getElementById('loading-text').innerText = text;
+    document.getElementById('loading').style.display = 'flex';
+  }
+  function hideLoading() { document.getElementById('loading').style.display = 'none'; }
+
+  function login() {
+    if (document.getElementById('admin-pass').value === ADMIN_PASS) {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('admin-content').style.display = 'block';
+      loadAllData();
+    } else { alert("รหัสผ่านไม่ถูกต้อง"); }
+  }
+
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+    document.getElementById(tabId + '-section').style.display = 'block';
+    event.currentTarget.classList.add('active');
+  }
+
+  async function loadAllData() {
+    showLoading();
+    try {
+      const [logsRes, settingsRes] = await Promise.all([
+        fetch(WEB_APP_URL, { method: 'POST', body: JSON.stringify({action:'getLogs'}) }),
+        fetch(WEB_APP_URL, { method: 'POST', body: JSON.stringify({action:'getEmployeeSettings'}) })
+      ]);
+      
+      masterData.logs = await logsRes.json();
+      masterData.settings = await settingsRes.json();
+
+      renderSettings();
+      renderLogs();
+      calculatePayroll();
+    } catch (e) {
+      alert("ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบการเชื่อมต่อ");
+    }
+    hideLoading();
+  }
+
+  function renderSettings() {
+    const tbody = document.getElementById('settings-body');
+    tbody.innerHTML = masterData.settings.map(s => `
+      <tr>
+        <td>${s.name}</td>
+        <td>${s.dept}</td>
+        <td>${s.empType}</td>
+        <td>${s.rate} ฿</td>
+        <td>${s.startTime || '-'}</td>
+        <td style="color:var(--warning)">
+          ${s.advance || 0} ฿
+          <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px; margin-left: 10px;" onclick="promptUpdateAdvance('${s.name}', ${s.advance || 0})">✎ แก้ไข</button>
+        </td>
+      </tr>
+    `).join('');
+    document.getElementById('stat-staff').innerText = masterData.settings.length;
+  }
+
+  function renderLogs() {
+    const tbody = document.getElementById('logs-body');
+    tbody.innerHTML = masterData.logs.slice().reverse().slice(0, 50).map(l => `
+      <tr>
+        <td>${l.timestamp}</td>
+        <td>${l.name}</td>
+        <td>${l.type}</td>
+      </tr>
+    `).join('');
+  }
+
+  function standardizeName(name) {
+    return String(name || "").replace(/\(Manual\)/gi, '').replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, ' ').trim();
+  }
+
+  function calculatePayroll() {
+    const now = new Date();
+    const currentDay = now.getDay(); 
+    const daysSinceTue = (currentDay + 5) % 7;
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - daysSinceTue);
+    startOfWeek.setHours(0,0,0,0);
+
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23,59,59,999);
+
+    globalWeekText = `รอบวันที่: ${startOfWeek.toLocaleDateString('th-TH')} - ${endOfWeek.toLocaleDateString('th-TH')}`;
+    document.getElementById('week-display').innerText = globalWeekText;
+
+    const summary = {};
+    masterData.settings.forEach(s => {
+      const cleanName = standardizeName(s.name);
+      const isDaily = String(s.empType || "").includes("รายวัน");
+      
+      summary[cleanName] = { 
+        config: { ...s, empType: isDaily ? "รายวัน" : "รายชั่วโมง", name: cleanName, rate: parseFloat(s.rate) || 0, advance: parseFloat(s.advance) || 0 }, 
+        daysWorked: new Set(), 
+        totalHours: 0, 
+        totalLateMinutes: 0 
+      };
+    });
+
+    const weeklyLogs = masterData.logs.filter(l => {
+      let lDate = new Date(String(l.timestamp).replace(' ', 'T'));
+      if (isNaN(lDate)) lDate = new Date(l.timestamp);
+      return lDate >= startOfWeek && lDate <= endOfWeek;
+    });
+
+    const dailyGroup = {};
+    weeklyLogs.forEach(l => {
+      let lDate = new Date(String(l.timestamp).replace(' ', 'T'));
+      if (isNaN(lDate)) lDate = new Date(l.timestamp);
+      
+      const cleanLogName = standardizeName(l.name);
+      const dateStr = `${lDate.getFullYear()}-${String(lDate.getMonth() + 1).padStart(2, '0')}-${String(lDate.getDate()).padStart(2, '0')}`;
+      const dayKey = cleanLogName + "_" + dateStr;
+      
+      if (!dailyGroup[dayKey]) dailyGroup[dayKey] = { in: null, out: null };
+      
+      const lType = String(l.type || "").trim();
+      if (lType.includes('เข้า') && (!dailyGroup[dayKey].in || lDate < dailyGroup[dayKey].in)) dailyGroup[dayKey].in = lDate;
+      if (lType.includes('ออก') && (!dailyGroup[dayKey].out || lDate > dailyGroup[dayKey].out)) dailyGroup[dayKey].out = lDate;
+    });
+
+    for (const key in dailyGroup) {
+      const [name, dateStr] = key.split('_');
+      if (!summary[name]) continue;
+
+      const dayData = dailyGroup[key];
+      const config = summary[name].config;
+
+      if (dayData.in) {
+        summary[name].daysWorked.add(dateStr);
+        
+        if (config.startTime) {
+          let startTimeStr = String(config.startTime).trim().replace('.', ':');
+          if (startTimeStr.includes('T')) {
+             const d = new Date(startTimeStr);
+             startTimeStr = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+          }
+          if (startTimeStr.includes(':')) {
+            const [targetH, targetM] = startTimeStr.split(':');
+            const targetTime = new Date(dayData.in);
+            targetTime.setHours(parseInt(targetH, 10), parseInt(targetM, 10), 0, 0);
+
+            if (dayData.in > targetTime) {
+              const diffMs = dayData.in - targetTime;
+              summary[name].totalLateMinutes += Math.floor(diffMs / 60000);
+            }
+          }
+        }
+        if (dayData.out && dayData.out > dayData.in) {
+          summary[name].totalHours += (dayData.out - dayData.in) / (1000 * 60 * 60);
+        }
       }
     }
-    return returnJson({status: "success"});
+
+    let totalPay = 0, totalLatePay = 0, totalAdvancePay = 0;
+    const tbody = document.getElementById('payroll-body');
+    
+    globalSummary = summary;
+    
+    tbody.innerHTML = Object.values(summary).map(s => {
+      let grossPay = s.config.empType === "รายวัน" ? (s.daysWorked.size * s.config.rate) : (s.totalHours * s.config.rate);
+      const latePenalty = s.totalLateMinutes * 1; 
+      const advanceDeduction = s.config.advance; 
+      const netPay = Math.max(0, grossPay - latePenalty - advanceDeduction);
+
+      s.calculated = { grossPay, latePenalty, advanceDeduction, netPay };
+
+      totalPay += netPay; totalLatePay += latePenalty; totalAdvancePay += advanceDeduction;
+
+      return `
+        <tr>
+          <td><strong>${s.config.name}</strong><br><small>${s.config.dept}</small></td>
+          <td>${s.config.empType}</td>
+          <td>${s.config.empType === "รายวัน" ? s.daysWorked.size + ' วัน' : s.totalHours.toFixed(1) + ' ชม.'}</td>
+          <td class="text-danger">${s.totalLateMinutes} นาที</td>
+          <td class="salary-tag">${netPay.toLocaleString()} ฿</td>
+          <td>
+            <button class="btn btn-slip" onclick="generateSlipImage('${s.config.name}')">🖨️ ออกสลิป</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    document.getElementById('stat-total').innerText = totalPay.toLocaleString(undefined, {minimumFractionDigits: 2});
+    document.getElementById('stat-late').innerText = totalLatePay.toLocaleString();
+    document.getElementById('stat-advance').innerText = totalAdvancePay.toLocaleString();
   }
-  
-  // ดึงข้อมูลใบหน้าพนักงานสำหรับแอปแสกน
-  if (data.action == 'getKnownFaces') {
-    var sheet = ss.getSheetByName('Users');
-    if (!sheet) return returnJson([]);
-    var rows = sheet.getDataRange().getValues();
-    var faces = rows.slice(1).map(function(r) {
-      return {
-        label: r[0],
-        descriptor: JSON.parse(r[1])
-      };
+
+  function promptUpdateAdvance(name, currentAdvance) {
+    const amountStr = prompt(`ระบุยอดเบิกล่วงหน้า (ติดหนี้) สำหรับคุณ ${name}:\n*ใส่ 0 เพื่อล้างยอดเบิกคืนเป็นปกติ`, currentAdvance);
+    if (amountStr === null) return; 
+    const amount = parseFloat(amountStr) || 0;
+    showLoading("กำลังอัปเดตยอดเบิก...");
+
+    fetch(WEB_APP_URL, {
+      method: 'POST', body: JSON.stringify({ action: 'updateAdvance', name: name, advance: amount })
+    }).then(() => {
+      const emp = masterData.settings.find(s => s.name === name);
+      if(emp) emp.advance = amount;
+      renderSettings(); calculatePayroll(); hideLoading();
+    }).catch(err => {
+      alert("เกิดข้อผิดพลาดในการบันทึกยอด: " + err.message); hideLoading();
     });
-    return returnJson(faces);
   }
-}
 
-/**
- * ฟังก์ชันช่วยเหลือสำหรับการตอบกลับเป็น JSON
- */
-function returnJson(data) {
-  return ContentService.createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+  function generateSlipImage(employeeName) {
+    showLoading("กำลังสร้างสลิปเงินเดือน...");
+    const data = globalSummary[employeeName];
+    if(!data) { alert("ไม่พบข้อมูล"); hideLoading(); return; }
 
-/**
- * ฟังก์ชันสำหรับตรวจสอบความพร้อมของ API ผ่านบราวเซอร์
- */
-function doGet(e) {
-  return HtmlService.createHtmlOutput("<h3>API ระบบลงเวลา Thonwithi พร้อมใช้งาน</h3><p>สถานะ: ปกติ</p>");
-}
+    document.getElementById('slip-date').innerText = globalWeekText;
+    document.getElementById('slip-name').innerText = data.config.name;
+    document.getElementById('slip-dept').innerText = data.config.dept;
+    
+    const workUnitStr = data.config.empType === "รายวัน" ? `${data.daysWorked.size} วัน` : `${data.totalHours.toFixed(1)} ชั่วโมง`;
+    document.getElementById('slip-work-unit').innerText = workUnitStr;
+    document.getElementById('slip-gross').innerText = `${data.calculated.grossPay.toLocaleString()} ฿`;
+    
+    document.getElementById('slip-late-min').innerText = data.totalLateMinutes;
+    document.getElementById('slip-late-pay').innerText = `-${data.calculated.latePenalty.toLocaleString()} ฿`;
+    document.getElementById('slip-advance').innerText = `-${data.calculated.advanceDeduction.toLocaleString()} ฿`;
+    document.getElementById('slip-net').innerText = `${data.calculated.netPay.toLocaleString()} ฿`;
+
+    const slipElement = document.getElementById('slip-template');
+    
+    html2canvas(slipElement, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
+      const imgData = canvas.toDataURL("image/png");
+      
+      const link = document.createElement('a');
+      link.download = `Payslip_${data.config.name.replace(/\s+/g, '_')}.png`;
+      link.href = imgData;
+      link.click();
+      
+      hideLoading();
+    }).catch(err => {
+      console.error("Error generating slip:", err);
+      alert("เกิดข้อผิดพลาดในการสร้างสลิป");
+      hideLoading();
+    });
+  }
+</script>
+
+</body>
+</html>
