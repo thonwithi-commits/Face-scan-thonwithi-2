@@ -42,7 +42,8 @@
     }
     .tab.active { background: var(--accent); color: #000; font-weight: 600; }
 
-    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    /* ปรับปรุงตารางสรุปด้านบนให้รองรับ 5 กล่อง */
+    .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
     .info-card { background: var(--glass); border-radius: 16px; padding: 15px; border-left: 4px solid var(--accent); }
     .info-card small { opacity: 0.6; display: block; margin-bottom: 5px; }
     .info-card strong { font-size: 20px; color: var(--accent); }
@@ -111,15 +112,17 @@
         <p id="week-display" style="opacity:0.6; margin:5px 0 0 0; font-size: 14px;"></p>
       </div>
       <div>
-        <button class="btn btn-bonus" onclick="distributeBonusAll()">🎉 อัดฉีดโบนัส</button>
+        <button class="btn btn-bonus" onclick="distributeBonusAll()">🎉 อัดฉีดโบนัสรวม</button>
         <button class="btn btn-secondary" onclick="location.reload()">Log Out</button>
       </div>
     </div>
 
+    <!-- ส่วนสรุปยอดที่แก้ไข ID ให้ตรงกับโค้ด JS -->
     <div class="info-grid">
       <div class="info-card"><small>พนักงานทั้งหมด</small><strong id="stat-staff">0</strong> คน</div>
       <div class="info-card"><small>ยอดจ่ายสัปดาห์นี้</small><strong id="stat-total">0.00</strong> ฿</div>
       <div class="info-card"><small>แจกโบนัสรวม</small><strong id="stat-bonus" class="bonus-tag">0</strong> ฿</div>
+      <div class="info-card"><small>เบิกล่วงหน้ารวม</small><strong id="stat-advance" style="color:var(--warning)">0</strong> ฿</div>
       <div class="info-card"><small>หักมาสายรวม</small><strong id="stat-late" style="color:var(--danger)">0</strong> ฿</div>
     </div>
 
@@ -232,7 +235,6 @@
 </div>
 
 <script>
-  // นำ URL เดิมของคุณมาใส่ตรงนี้
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwBd8OsZFF2i44KrfCnGI7c9idmDakwWEgse9qt_WDOD5OOxG13eRaXf16SavEnP2oZ/exec"; 
   const ADMIN_PASS = "123";
 
@@ -261,6 +263,12 @@
     event.currentTarget.classList.add('active');
   }
 
+  // ฟังก์ชันช่วยเหลือ: ป้องกัน Error "setting innerText of null"
+  function safeSetText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.innerText = text;
+  }
+
   async function loadAllData() {
     showLoading();
     try {
@@ -270,30 +278,21 @@
         body: JSON.stringify({action: action})
       });
 
-      // ดึงข้อมูลแบบทีละตัวเพื่อความชัวร์และเช็ค Error ได้ละเอียดขึ้น
       const resLogs = await fetch(WEB_APP_URL, fetchOpts('getLogs'));
       const textLogs = await resLogs.text();
-      try { masterData.logs = JSON.parse(textLogs); } catch(e) { console.error("Logs Parse Error", textLogs); masterData.logs = []; }
+      try { masterData.logs = JSON.parse(textLogs); } catch(e) { masterData.logs = []; }
 
       const resSettings = await fetch(WEB_APP_URL, fetchOpts('getEmployeeSettings'));
       const textSettings = await resSettings.text();
-      try { masterData.settings = JSON.parse(textSettings); } catch(e) { console.error("Settings Parse Error", textSettings); masterData.settings = []; }
+      try { masterData.settings = JSON.parse(textSettings); } catch(e) { masterData.settings = []; }
 
-      // ตรวจสอบว่ามีข้อมูลพนักงานหรือไม่
       if (masterData.settings.length > 0) {
         renderSettings();
         renderLogs();
         calculatePayroll();
-      } else {
-        console.warn("ไม่พบรายชื่อพนักงานในแผ่นงาน Settings");
       }
-      
     } catch (e) {
-      console.error("Fetch Error:", e);
-      // แจ้งเตือนเฉพาะกรณีที่ร้ายแรงจริงๆ (เช่น URL ผิด)
-      if (!masterData.settings || masterData.settings.length === 0) {
-        alert("ไม่สามารถดึงข้อมูลพนักงานได้ โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
-      }
+      console.error(e);
     }
     hideLoading();
   }
@@ -316,7 +315,7 @@
         </td>
       </tr>
     `).join('');
-    document.getElementById('stat-staff').innerText = masterData.settings.length;
+    safeSetText('stat-staff', masterData.settings.length);
   }
 
   function renderLogs() {
@@ -347,25 +346,15 @@
     endOfWeek.setHours(23,59,59,999);
 
     globalWeekText = `รอบวันที่: ${startOfWeek.toLocaleDateString('th-TH')} - ${endOfWeek.toLocaleDateString('th-TH')}`;
-    document.getElementById('week-display').innerText = globalWeekText;
+    safeSetText('week-display', globalWeekText);
 
     const summary = {};
     masterData.settings.forEach(s => {
       const cleanName = standardizeName(s.name);
       const isDaily = String(s.empType || "").includes("รายวัน");
-      
       summary[cleanName] = { 
-        config: { 
-          ...s, 
-          empType: isDaily ? "รายวัน" : "รายชั่วโมง", 
-          name: cleanName, 
-          rate: parseFloat(s.rate) || 0, 
-          advance: parseFloat(s.advance) || 0,
-          bonus: parseFloat(s.bonus) || 0 
-        }, 
-        daysWorked: new Set(), 
-        totalHours: 0, 
-        totalLateMinutes: 0 
+        config: { ...s, empType: isDaily ? "รายวัน" : "รายชั่วโมง", name: cleanName, rate: parseFloat(s.rate) || 0, advance: parseFloat(s.advance) || 0, bonus: parseFloat(s.bonus) || 0 }, 
+        daysWorked: new Set(), totalHours: 0, totalLateMinutes: 0 
       };
     });
 
@@ -379,28 +368,24 @@
     weeklyLogs.forEach(l => {
       let lDate = new Date(String(l.timestamp).replace(' ', 'T'));
       if (isNaN(lDate)) lDate = new Date(l.timestamp);
-      
       const cleanLogName = standardizeName(l.name);
       const dateStr = `${lDate.getFullYear()}-${String(lDate.getMonth() + 1).padStart(2, '0')}-${String(lDate.getDate()).padStart(2, '0')}`;
       const dayKey = cleanLogName + "_" + dateStr;
-      
       if (!dailyGroup[dayKey]) dailyGroup[dayKey] = { in: null, out: null };
-      
       const lType = String(l.type || "").trim();
       if (lType.includes('เข้า') && (!dailyGroup[dayKey].in || lDate < dailyGroup[dayKey].in)) dailyGroup[dayKey].in = lDate;
       if (lType.includes('ออก') && (!dailyGroup[dayKey].out || lDate > dailyGroup[dayKey].out)) dailyGroup[dayKey].out = lDate;
     });
 
     for (const key in dailyGroup) {
-      const [name, dateStr] = key.split('_');
+      const lastUnderscore = key.lastIndexOf('_');
+      const name = key.substring(0, lastUnderscore);
+      const dateStr = key.substring(lastUnderscore + 1);
       if (!summary[name]) continue;
-
       const dayData = dailyGroup[key];
       const config = summary[name].config;
-
       if (dayData.in) {
         summary[name].daysWorked.add(dateStr);
-        
         if (config.startTime) {
           let startTimeStr = String(config.startTime).trim().replace('.', ':');
           if (startTimeStr.includes('T')) {
@@ -411,7 +396,6 @@
             const [targetH, targetM] = startTimeStr.split(':');
             const targetTime = new Date(dayData.in);
             targetTime.setHours(parseInt(targetH, 10), parseInt(targetM, 10), 0, 0);
-
             if (dayData.in > targetTime) {
               const diffMs = dayData.in - targetTime;
               summary[name].totalLateMinutes += Math.floor(diffMs / 60000);
@@ -426,7 +410,6 @@
 
     let totalPay = 0, totalLatePay = 0, totalAdvancePay = 0, totalBonusPay = 0;
     const tbody = document.getElementById('payroll-body');
-    
     globalSummary = summary;
     
     tbody.innerHTML = Object.values(summary).map(s => {
@@ -434,16 +417,9 @@
       const latePenalty = s.totalLateMinutes * 1; 
       const advanceDeduction = s.config.advance; 
       const bonusAddition = s.config.bonus;
-
       const netPay = Math.max(0, grossPay + bonusAddition - latePenalty - advanceDeduction);
-
       s.calculated = { grossPay, latePenalty, advanceDeduction, bonusAddition, netPay };
-
-      totalPay += netPay; 
-      totalLatePay += latePenalty; 
-      totalAdvancePay += advanceDeduction;
-      totalBonusPay += bonusAddition;
-
+      totalPay += netPay; totalLatePay += latePenalty; totalAdvancePay += advanceDeduction; totalBonusPay += bonusAddition;
       return `
         <tr>
           <td><strong>${s.config.name}</strong><br><small>${s.config.dept}</small></td>
@@ -453,43 +429,34 @@
           <td style="color:var(--warning)">-${advanceDeduction} ฿</td>
           <td class="bonus-tag">+${bonusAddition} ฿</td>
           <td class="salary-tag">${netPay.toLocaleString()} ฿</td>
-          <td>
-            <button class="btn btn-slip" onclick="generateSlipImage('${s.config.name}')">🖨️ สลิป</button>
-          </td>
+          <td><button class="btn btn-slip" onclick="generateSlipImage('${s.config.name}')">🖨️ สลิป</button></td>
         </tr>
       `;
     }).join('');
 
-    document.getElementById('stat-total').innerText = totalPay.toLocaleString(undefined, {minimumFractionDigits: 2});
-    document.getElementById('stat-late').innerText = totalLatePay.toLocaleString();
-    document.getElementById('stat-advance').innerText = totalAdvancePay.toLocaleString();
-    document.getElementById('stat-bonus').innerText = totalBonusPay.toLocaleString();
+    safeSetText('stat-total', totalPay.toLocaleString(undefined, {minimumFractionDigits: 2}));
+    safeSetText('stat-late', totalLatePay.toLocaleString());
+    safeSetText('stat-advance', totalAdvancePay.toLocaleString());
+    safeSetText('stat-bonus', totalBonusPay.toLocaleString());
   }
 
   function distributeBonusAll() {
     const totalStaff = masterData.settings.length;
     if (totalStaff === 0) return alert("ไม่มีพนักงานในระบบ");
-
     const amountStr = prompt(`ระบุยอดเงิน "รวมทั้งหมด" ที่ต้องการแจกโบนัส:\n(ระบบจะนำไปหารให้พนักงานทั้ง ${totalStaff} คนเท่าๆ กัน)`);
     if (amountStr === null) return; 
-
     const totalAmount = parseFloat(amountStr) || 0;
     const bonusPerPerson = Math.floor(totalAmount / totalStaff); 
-
     if (confirm(`ยอดรวม ${totalAmount} ฿\nหาร ${totalStaff} คน = จะได้โบนัสคนละ ${bonusPerPerson} ฿\n\nยืนยันการทำรายการหรือไม่?`)) {
       showLoading("กำลังแจกจ่ายโบนัส...");
-
       fetch(WEB_APP_URL, {
-        method: 'POST', 
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({ action: 'updateBonusAll', bonusPerPerson: bonusPerPerson })
       }).then(() => {
         masterData.settings.forEach(emp => emp.bonus = bonusPerPerson);
         renderSettings(); calculatePayroll(); hideLoading();
-        alert(`ทำรายการสำเร็จ! แจกโบนัสคนละ ${bonusPerPerson} ฿ เรียบร้อยแล้ว`);
-      }).catch(err => {
-        alert("เกิดข้อผิดพลาด: " + err.message); hideLoading();
-      });
+        alert(`แจกโบนัสเรียบร้อย!`);
+      }).catch(err => { alert("เกิดข้อผิดพลาด"); hideLoading(); });
     }
   }
 
@@ -497,70 +464,48 @@
     let msg = type === 'advance' ? "ระบุยอดเบิกล่วงหน้า (ติดหนี้)" : "ระบุยอดโบนัสพิเศษ (บวกเพิ่ม)";
     const amountStr = prompt(`${msg} สำหรับคุณ ${name}:\n*ใส่ 0 เพื่อล้างยอด`, currentVal);
     if (amountStr === null) return; 
-    
     const amount = parseFloat(amountStr) || 0;
     const actionName = type === 'advance' ? 'updateAdvance' : 'updateBonusSingle';
     const payload = { action: actionName, name: name };
     if (type === 'advance') payload.advance = amount; else payload.bonus = amount;
-
     showLoading("กำลังอัปเดตข้อมูล...");
-
     fetch(WEB_APP_URL, {
-      method: 'POST', 
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
     }).then(() => {
       const emp = masterData.settings.find(s => s.name === name);
-      if(emp) {
-        if (type === 'advance') emp.advance = amount;
-        else emp.bonus = amount;
-      }
+      if(emp) { if (type === 'advance') emp.advance = amount; else emp.bonus = amount; }
       renderSettings(); calculatePayroll(); hideLoading();
-    }).catch(err => {
-      alert("เกิดข้อผิดพลาดในการบันทึก: " + err.message); hideLoading();
-    });
+    }).catch(err => { alert("เกิดข้อผิดพลาด"); hideLoading(); });
   }
 
   function generateSlipImage(employeeName) {
     showLoading("กำลังสร้างสลิปเงินเดือน...");
     const data = globalSummary[employeeName];
-    if(!data) { alert("ไม่พบข้อมูล"); hideLoading(); return; }
-
+    if(!data) { hideLoading(); return; }
     document.getElementById('slip-date').innerText = globalWeekText;
     document.getElementById('slip-name').innerText = data.config.name;
     document.getElementById('slip-dept').innerText = data.config.dept;
-    
     const workUnitStr = data.config.empType === "รายวัน" ? `${data.daysWorked.size} วัน` : `${data.totalHours.toFixed(1)} ชั่วโมง`;
     document.getElementById('slip-work-unit').innerText = workUnitStr;
     document.getElementById('slip-gross').innerText = `${data.calculated.grossPay.toLocaleString()} ฿`;
-    
     const bonusRow = document.getElementById('slip-bonus-row');
     if (data.calculated.bonusAddition > 0) {
       bonusRow.style.display = 'flex';
       document.getElementById('slip-bonus-pay').innerText = `+${data.calculated.bonusAddition.toLocaleString()} ฿`;
-    } else {
-      bonusRow.style.display = 'none'; 
-    }
-    
+    } else { bonusRow.style.display = 'none'; }
     document.getElementById('slip-late-min').innerText = data.totalLateMinutes;
     document.getElementById('slip-late-pay').innerText = `-${data.calculated.latePenalty.toLocaleString()} ฿`;
     document.getElementById('slip-advance').innerText = `-${data.calculated.advanceDeduction.toLocaleString()} ฿`;
     document.getElementById('slip-net').innerText = `${data.calculated.netPay.toLocaleString()} ฿`;
-
-    const slipElement = document.getElementById('slip-template');
-    
-    html2canvas(slipElement, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
-      const imgData = canvas.toDataURL("image/png");
+    html2canvas(document.getElementById('slip-template'), { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
       const link = document.createElement('a');
-      link.download = `Payslip_${data.config.name.replace(/\s+/g, '_')}.png`;
-      link.href = imgData;
+      link.download = `Slip_${data.config.name}.png`;
+      link.href = canvas.toDataURL("image/png");
       link.click();
       hideLoading();
-    }).catch(err => {
-      alert("เกิดข้อผิดพลาดในการสร้างสลิป"); hideLoading();
     });
   }
 </script>
-
 </body>
 </html>
