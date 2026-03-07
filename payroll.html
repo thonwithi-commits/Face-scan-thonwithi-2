@@ -264,27 +264,36 @@
   async function loadAllData() {
     showLoading();
     try {
-      // เพิ่ม headers ป้องกันการถูกบล็อกจาก Google
       const fetchOpts = (action) => ({
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({action: action})
       });
 
-      const [logsRes, settingsRes] = await Promise.all([
-        fetch(WEB_APP_URL, fetchOpts('getLogs')),
-        fetch(WEB_APP_URL, fetchOpts('getEmployeeSettings'))
-      ]);
-      
-      masterData.logs = await logsRes.json();
-      masterData.settings = await settingsRes.json();
+      // ดึงข้อมูลแบบทีละตัวเพื่อความชัวร์และเช็ค Error ได้ละเอียดขึ้น
+      const resLogs = await fetch(WEB_APP_URL, fetchOpts('getLogs'));
+      const textLogs = await resLogs.text();
+      try { masterData.logs = JSON.parse(textLogs); } catch(e) { console.error("Logs Parse Error", textLogs); masterData.logs = []; }
 
-      renderSettings();
-      renderLogs();
-      calculatePayroll();
+      const resSettings = await fetch(WEB_APP_URL, fetchOpts('getEmployeeSettings'));
+      const textSettings = await resSettings.text();
+      try { masterData.settings = JSON.parse(textSettings); } catch(e) { console.error("Settings Parse Error", textSettings); masterData.settings = []; }
+
+      // ตรวจสอบว่ามีข้อมูลพนักงานหรือไม่
+      if (masterData.settings.length > 0) {
+        renderSettings();
+        renderLogs();
+        calculatePayroll();
+      } else {
+        console.warn("ไม่พบรายชื่อพนักงานในแผ่นงาน Settings");
+      }
+      
     } catch (e) {
-      console.error(e);
-      alert("ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบการเชื่อมต่อ (ให้เช็กว่าพิมพ์หัวข้อ Advance และ Bonus ใน Google Sheets หรือยัง และตรวจสอบการ Deploy)");
+      console.error("Fetch Error:", e);
+      // แจ้งเตือนเฉพาะกรณีที่ร้ายแรงจริงๆ (เช่น URL ผิด)
+      if (!masterData.settings || masterData.settings.length === 0) {
+        alert("ไม่สามารถดึงข้อมูลพนักงานได้ โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ต");
+      }
     }
     hideLoading();
   }
