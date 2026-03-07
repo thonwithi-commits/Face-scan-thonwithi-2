@@ -23,7 +23,7 @@
       overflow: hidden;
     }
 
-    /* เอฟเฟกต์แสงหมุนวนด้านหลัง (ซ่อนไว้ข้างหลัง) */
+    /* เอฟเฟกต์แสงหมุนวนด้านหลัง */
     body::before {
       content: "";
       position: absolute;
@@ -34,7 +34,7 @@
     }
     @keyframes rotate { 100% { transform: rotate(360deg); } }
 
-    /* การ์ดสไตล์กระจก (Glassmorphism) */
+    /* การ์ดสไตล์กระจกหลัก */
     .glass-card { 
       background: rgba(255, 255, 255, 0.1); 
       backdrop-filter: blur(16px); 
@@ -90,36 +90,49 @@
       border: 1px solid rgba(255,255,255,0.1);
     }
 
-    /* ปุ่มกด */
-    .btn-container { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+    /* --- ปุ่มกดสไตล์ Minimal Matte (เอฟเฟกต์ยกตัว 3 มิติ) --- */
+    .btn-container { display: flex; flex-direction: column; gap: 15px; width: 100%; }
+    .btn-row { display: flex; gap: 15px; width: 100%; justify-content: center; }
     
     .btn { 
-      backdrop-filter: blur(5px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.15); /* ขอบบางๆ เรียบง่าย */
       border-radius: 16px; 
       font-size: 22px; 
       font-weight: 600; 
       cursor: pointer; 
       color: white; 
       flex: 1; 
-      min-width: 160px; 
+      min-width: 150px; 
       padding: 20px;
-      transition: all 0.3s ease; 
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+      transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); /* แอนิเมชันนุ่มนวล */
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
       font-family: 'Sarabun', sans-serif;
     }
-    .btn:active { transform: scale(0.96); }
-    
-    .btn-in { background: rgba(40, 167, 69, 0.5); }
-    .btn-in:hover { background: rgba(40, 167, 69, 0.7); border-color: rgba(255,255,255,0.6); box-shadow: 0 0 15px rgba(40, 167, 69, 0.5); }
-    
-    .btn-out { background: rgba(220, 53, 69, 0.5); }
-    .btn-out:hover { background: rgba(220, 53, 69, 0.7); border-color: rgba(255,255,255,0.6); box-shadow: 0 0 15px rgba(220, 53, 69, 0.5); }
-    
-    .btn-admin { background: rgba(0, 123, 255, 0.4); width: 100%; font-size: 18px; padding: 15px; margin-top: 10px; }
-    .btn-admin:hover { background: rgba(0, 123, 255, 0.6); border-color: rgba(255,255,255,0.6); box-shadow: 0 0 15px rgba(0, 123, 255, 0.5); }
 
+    /* เอฟเฟกต์ยกตัวขึ้น (Lift Effect) เวลานำเมาส์ไปชี้ */
+    .btn:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 20px rgba(0,0,0,0.25);
+    }
+    .btn:active { 
+      transform: translateY(0px) scale(0.98); 
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+    }
+    
+    /* ปุ่มเข้างาน (สีเขียวแบบ Matte) */
+    .btn-in { background: rgba(40, 167, 69, 0.85); }
+    .btn-in:hover { background: rgba(40, 167, 69, 1); border-color: rgba(255,255,255,0.4); }
+    
+    /* ปุ่มออกงาน (สีแดงแบบ Matte) */
+    .btn-out { background: rgba(220, 53, 69, 0.85); }
+    .btn-out:hover { background: rgba(220, 53, 69, 1); border-color: rgba(255,255,255,0.4); }
+    
+    /* ปุ่มแอดมิน (สีดำแบบ Matte) */
+    .btn-admin { background: rgba(30, 30, 30, 0.85); width: 100%; font-size: 18px; padding: 15px; }
+    .btn-admin:hover { background: rgba(0, 0, 0, 1); border-color: rgba(255,255,255,0.4); }
+
+    /* ปุ่มยกเลิก (เทาใสแบบ Matte) */
     .btn-cancel { 
       background: rgba(255, 255, 255, 0.15); 
       margin-top: 15px; 
@@ -127,23 +140,32 @@
       font-size: 18px; 
       padding: 15px;
       display: none; 
+      backdrop-filter: blur(10px);
     }
-    .btn-cancel:hover { background: rgba(255, 255, 255, 0.25); }
+    .btn-cancel:hover { background: rgba(255, 255, 255, 0.25); border-color: rgba(255,255,255,0.4); }
 
-    /* ฟอร์มลงทะเบียน (ซ่อนไว้ก่อน) */
+    /* ฟอร์มลงทะเบียนสไตล์กระจก */
     #register-ui { display: none; width: 100%; }
     .input-field {
       width: 85%;
       padding: 15px;
       margin-bottom: 20px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.3);
-      background: rgba(0,0,0,0.2);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
       color: white;
       font-size: 20px;
       font-family: 'Sarabun', sans-serif;
       text-align: center;
       outline: none;
+      box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+    }
+    .input-field:focus {
+      background: rgba(255,255,255,0.2);
+      border-color: rgba(255,255,255,0.8);
+      box-shadow: 0 0 15px rgba(255,255,255,0.3), inset 0 2px 5px rgba(0,0,0,0.1);
     }
     .input-field::placeholder { color: rgba(255,255,255,0.6); }
 
@@ -175,10 +197,12 @@
       <button class="btn btn-in" style="width: 100%; margin-bottom: 10px;" onclick="captureAndRegister()">บันทึกใบหน้า</button>
     </div>
 
-    <!-- ปุ่มเลือก เข้า/ออก -->
+    <!-- ปุ่มเลือก เข้า/ออก/ลงทะเบียน (จัดระเบียบใหม่) -->
     <div class="btn-container" id="menu-buttons">
-      <button class="btn btn-in" onclick="startSystem('เข้างาน')">สแกนเข้างาน</button>
-      <button class="btn btn-out" onclick="startSystem('ออกงาน')">สแกนออกงาน</button>
+      <div class="btn-row">
+        <button class="btn btn-in" onclick="startSystem('เข้างาน')">สแกนเข้างาน</button>
+        <button class="btn btn-out" onclick="startSystem('ออกงาน')">สแกนออกงาน</button>
+      </div>
       <button class="btn btn-admin" onclick="checkAdmin()">ลงทะเบียนพนักงาน (Admin)</button>
     </div>
 
