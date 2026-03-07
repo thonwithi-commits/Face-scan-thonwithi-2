@@ -219,6 +219,15 @@
     `).join('');
   }
 
+  // ฟังก์ชันใหม่: ล้างชื่อให้สะอาดที่สุด ลบเว้นวรรคเกิน และอักขระซ่อนเร้น
+  function standardizeName(name) {
+    return String(name || "")
+        .replace(/\(Manual\)/gi, '')
+        .replace(/[\u200B-\u200D\uFEFF]/g, '') // ลบอักขระซ่อนเร้นที่มาจาก Excel/Sheets
+        .replace(/\s+/g, ' ') // ปรับเว้นวรรคหลายช่องให้เหลือ 1 ช่อง
+        .trim();
+  }
+
   function calculatePayroll() {
     const now = new Date();
     const currentDay = now.getDay(); 
@@ -235,9 +244,10 @@
 
     const summary = {};
     masterData.settings.forEach(s => {
-      // แก้บั๊กที่ 2: ลบช่องว่างส่วนเกินออกจากประเภทการจ้าง
-      const cleanName = String(s.name || "").trim();
-      const cleanType = String(s.empType || "").trim();
+      // แก้บั๊กที่ 2: ใช้ include เช็กประเภท และใช้ standardizeName ล้างชื่อให้สะอาด
+      const cleanName = standardizeName(s.name);
+      const isDaily = String(s.empType || "").includes("รายวัน");
+      const cleanType = isDaily ? "รายวัน" : "รายชั่วโมง";
       const rateNum = parseFloat(s.rate) || 0;
       
       summary[cleanName] = { 
@@ -251,7 +261,7 @@
     const weeklyLogs = masterData.logs.filter(l => {
       let safeTimestamp = String(l.timestamp).replace(' ', 'T');
       let lDate = new Date(safeTimestamp);
-      if (isNaN(lDate)) lDate = new Date(l.timestamp); // Fallback
+      if (isNaN(lDate)) lDate = new Date(l.timestamp);
       return lDate >= startOfWeek && lDate <= endOfWeek;
     });
 
@@ -261,25 +271,33 @@
       let lDate = new Date(safeTimestamp);
       if (isNaN(lDate)) lDate = new Date(l.timestamp);
       
-      // แก้บั๊กที่ 1: ลบคำว่า (Manual) ออกจากชื่อเพื่อจับคู่ให้ตรงกับ Settings
-      const cleanLogName = String(l.name).replace(/\(Manual\)/gi, '').trim();
+      const cleanLogName = standardizeName(l.name);
       
-      const dateStr = lDate.toLocaleDateString('en-CA'); // YYYY-MM-DD
+      // ฟอร์แมตวันที่แบบปลอดภัยที่สุด ป้องกัน Safari รวน
+      const year = lDate.getFullYear();
+      const month = String(lDate.getMonth() + 1).padStart(2, '0');
+      const day = String(lDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
       const dayKey = cleanLogName + "_" + dateStr;
       
       if (!dailyGroup[dayKey]) dailyGroup[dayKey] = { in: null, out: null };
       
-      if (l.type === 'เข้างาน' && (!dailyGroup[dayKey].in || lDate < dailyGroup[dayKey].in)) {
+      const lType = String(l.type || "").trim();
+      if (lType.includes('เข้า') && (!dailyGroup[dayKey].in || lDate < dailyGroup[dayKey].in)) {
           dailyGroup[dayKey].in = lDate;
       }
-      if (l.type === 'ออกงาน' && (!dailyGroup[dayKey].out || lDate > dailyGroup[dayKey].out)) {
+      if (lType.includes('ออก') && (!dailyGroup[dayKey].out || lDate > dailyGroup[dayKey].out)) {
           dailyGroup[dayKey].out = lDate;
       }
     });
 
     for (const key in dailyGroup) {
-      const [name, dateStr] = key.split('_');
-      if (!summary[name]) continue; // ถ้าชื่อไม่มีใน Settings ให้ข้ามไป
+      const lastUnderscore = key.lastIndexOf('_');
+      const name = key.substring(0, lastUnderscore);
+      const dateStr = key.substring(lastUnderscore + 1);
+
+      if (!summary[name]) continue;
 
       const dayData = dailyGroup[key];
       const config = summary[name].config;
@@ -287,11 +305,10 @@
       if (dayData.in) {
         summary[name].daysWorked.add(dateStr);
         
-        // แก้บั๊กที่ 3: ระบบอ่านเวลามาสาย (รองรับทุกฟอร์แมตจาก Google Sheets)
+        // แก้บั๊กที่ 1: เปลี่ยน 06.00 (จุด) ให้เป็น 06:00 (โคลอน) อัตโนมัติ
         if (config.startTime) {
-          let startTimeStr = String(config.startTime).trim();
+          let startTimeStr = String(config.startTime).trim().replace('.', ':');
           
-          // ถ้า Sheets แปลงเวลาเป็น Date (เช่น 1899-12-30T08:00:00) ให้สกัดเอาแค่เวลาออกมา
           if (startTimeStr.includes('T')) {
              const d = new Date(startTimeStr);
              startTimeStr = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
@@ -300,9 +317,8 @@
           if (startTimeStr.includes(':')) {
             const [targetH, targetM] = startTimeStr.split(':');
             const targetTime = new Date(dayData.in);
-            targetTime.setHours(parseInt(targetH), parseInt(targetM), 0, 0);
+            targetTime.setHours(parseInt(targetH, 10), parseInt(targetM, 10), 0, 0);
 
-            // ถ้าเวลาเข้างาน "มากกว่า" เวลาเข้างานที่ตั้งไว้ แปลว่าสาย!
             if (dayData.in > targetTime) {
               const diffMs = dayData.in - targetTime;
               summary[name].totalLateMinutes += Math.floor(diffMs / 60000);
