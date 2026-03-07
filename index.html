@@ -98,13 +98,13 @@
       position: relative;
       border: 1px solid rgba(255, 255, 255, 0.15); 
       border-radius: 16px; 
-      font-size: 22px; 
+      font-size: 20px; 
       font-weight: 600; 
       cursor: pointer; 
       color: white; 
       flex: 1; 
-      min-width: 150px; 
-      padding: 20px;
+      min-width: 140px; 
+      padding: 18px;
       transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); 
       box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
       font-family: 'Sarabun', sans-serif;
@@ -122,7 +122,7 @@
     .btn-in { background: rgba(40, 167, 69, 0.85); }
     .btn-out { background: rgba(220, 53, 69, 0.85); }
     
-    /* ปุ่มสำรอง (สีน้ำตาลอ่อน) */
+    /* ปุ่มลงเวลาสำรอง (สีน้ำตาลอ่อน) */
     .btn-manual { background: rgba(141, 110, 99, 0.85); width: 100%; font-size: 18px; padding: 15px; }
 
     /* ปุ่มแอดมิน (สีดำ) */
@@ -170,11 +170,16 @@
     <video id="video" autoplay muted playsinline></video>
     <div id="status">กรุณาเลือกทำรายการ</div>
 
+    <!-- ส่วน Admin: เลือกวิธีลงทะเบียน -->
     <div id="register-ui">
-      <input type="text" id="reg-name" placeholder="ระบุชื่อพนักงาน" class="input-field">
-      <button class="btn btn-in" style="width: 100%; margin-bottom: 10px;" onclick="captureAndRegister()">บันทึกใบหน้า</button>
+      <input type="text" id="reg-name" placeholder="ระบุชื่อพนักงาน หรือ รหัส" class="input-field">
+      <div class="btn-container">
+        <button class="btn btn-in" style="width: 100%;" onclick="captureAndRegister()">ลงทะเบียนด้วยใบหน้า</button>
+        <button class="btn btn-admin" style="width: 100%; background: rgba(121, 85, 72, 0.9);" onclick="registerIdOnly()">ลงทะเบียนเฉพาะรหัส (Manual)</button>
+      </div>
     </div>
 
+    <!-- ปุ่มเมนูหน้าแรก -->
     <div class="btn-container" id="menu-buttons">
       <div class="btn-row">
         <button class="btn btn-in" onclick="startSystem('เข้างาน')">สแกนเข้างาน</button>
@@ -212,28 +217,30 @@
     let scanInterval = null;
     let isProcessing = false;
 
-    // --- ลงเวลาสำรองด้วยรหัสพนักงาน ---
+    // --- ลงเวลาด้วยรหัสพนักงาน ---
     function manualLog() {
       const empId = prompt("กรุณาระบุรหัสพนักงาน (เช่น A1001):");
       if (!empId) return;
 
       const mode = confirm("ตกลง = เข้างาน / ยกเลิก = ออกงาน");
-      const type = mode ? "เข้างาน" : "ออกงาน";
+      const type = mode ? "เข้างาน" : "出งาน"; // ใช้คำว่า เข้างาน / ออกงาน ตามตรรกะเดิม
+      const typeLabel = mode ? "เข้างาน" : "ออกงาน";
 
       status.innerText = `กำลังบันทึกข้อมูลสำหรับ ${empId}...`;
       
       fetch(WEB_APP_URL, {
         method: 'POST',
         mode: 'no-cors',
-        body: JSON.stringify({ action: 'log', name: empId + " (Manual)", type: type, lat: "-", lng: "-" })
+        body: JSON.stringify({ action: 'log', name: empId + " (Manual)", type: typeLabel, lat: "-", lng: "-" })
       }).then(() => {
-        alert(`บันทึก ${type} สำหรับรหัส ${empId} สำเร็จ!`);
+        alert(`บันทึก ${typeLabel} สำหรับรหัส ${empId} สำเร็จ!`);
         resetSystem();
       }).catch(err => {
         alert("เกิดข้อผิดพลาดในการเชื่อมต่อ");
       });
     }
 
+    // --- เริ่มระบบแสกนใบหน้า ---
     async function startSystem(mode) {
       try {
         currentMode = mode;
@@ -316,46 +323,72 @@
       });
     }
 
+    // --- โหมด Admin ---
     function checkAdmin() {
-      const pass = prompt("กรุณาใส่รหัสผ่านเพื่อเข้าสู่โหมด Admin:");
+      const pass = prompt("กรุณาใส่รหัสผ่าน Admin:");
       if (pass === ADMIN_PASSWORD) {
-        startRegistrationMode();
+        startAdminMenu();
       } else if (pass !== null) {
         alert("รหัสผ่านไม่ถูกต้อง!");
       }
     }
 
-    async function startRegistrationMode() {
-      try {
-        currentMode = "ลงทะเบียน";
-        menuButtons.style.display = 'none';
-        btnCancel.style.display = 'inline-block';
-        registerUI.style.display = 'block';
-        video.style.display = 'block';
-        status.innerText = "กำลังเตรียมกล้องสำหรับลงทะเบียน...";
-
-        const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
-        video.srcObject = stream;
-        
-        const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
-        await Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
-        ]);
-
-        status.innerText = "พร้อมลงทะเบียน! กรุณาระบุชื่อและหันหน้าเข้ากล้อง";
-        status.style.color = "#81c784"; 
-      } catch (err) {
-        alert("ไม่สามารถเปิดกล้องได้");
-        resetSystem();
-      }
+    function startAdminMenu() {
+      currentMode = "Admin Menu";
+      menuButtons.style.display = 'none';
+      btnCancel.style.display = 'inline-block';
+      registerUI.style.display = 'block';
+      video.style.display = 'none'; // ยังไม่เปิดกล้องจนกว่าจะเลือกแสกนหน้า
+      status.innerText = "โหมด Admin: เลือกวิธีลงทะเบียน";
+      status.style.color = "#ffffff";
     }
 
+    // ลงทะเบียนแบบระบุไอดีอย่างเดียว (ไม่ต้องเปิดกล้อง)
+    function registerIdOnly() {
+      const nameInput = document.getElementById('reg-name').value.trim();
+      if (!nameInput) {
+        alert("กรุณาระบุรหัสพนักงาน");
+        return;
+      }
+
+      status.innerText = `กำลังบันทึกรหัสพนักงาน ${nameInput}...`;
+      
+      // ส่งข้อมูลด้วย descriptor ว่าง (หรือสัญลักษณ์ระบุว่าเป็น Manual)
+      fetch(WEB_APP_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({ 
+          action: 'register', 
+          name: nameInput + " (Manual)", 
+          descriptor: [] // ส่งอาร์เรย์ว่างไป
+        })
+      }).then(() => {
+        alert(`ลงทะเบียนรหัสพนักงาน: "${nameInput}" สำเร็จ!`);
+        resetSystem();
+      });
+    }
+
+    // ลงทะเบียนแบบแสกนหน้า (ต้องเปิดกล้อง)
     async function captureAndRegister() {
       const nameInput = document.getElementById('reg-name').value.trim();
       if (!nameInput) {
         alert("กรุณาระบุชื่อพนักงาน");
+        return;
+      }
+
+      if (video.style.display === 'none') {
+        // เปิดกล้องถ้ายังไม่ได้เปิด
+        video.style.display = 'block';
+        status.innerText = "กำลังเปิดกล้อง... กรุณารอครู่เดียว";
+        const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
+        video.srcObject = stream;
+        
+        await Promise.all([
+          faceapi.nets.ssdMobilenetv1.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models'),
+          faceapi.nets.faceLandmark68Net.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models'),
+          faceapi.nets.faceRecognitionNet.loadFromUri('https://justadudewhohacks.github.io/face-api.js/models')
+        ]);
+        status.innerText = "พร้อมแสกน! กรุณามองกล้องแล้วกดบันทึกอีกครั้ง";
         return;
       }
 
@@ -367,11 +400,11 @@
           mode: 'no-cors',
           body: JSON.stringify({ action: 'register', name: nameInput, descriptor: descriptorArray })
         }).then(() => {
-          alert(`ลงทะเบียนพนักงาน: "${nameInput}" สำเร็จ!`);
+          alert(`ลงทะเบียนพนักงาน: "${nameInput}" สำเร็จเรียบร้อย!`);
           resetSystem();
         });
       } else {
-        alert("ตรวจไม่พบใบหน้า");
+        alert("ตรวจไม่พบใบหน้า กรุณามองกล้องให้ชัดเจน");
       }
     }
 
