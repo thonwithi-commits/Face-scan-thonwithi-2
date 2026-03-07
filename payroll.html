@@ -229,10 +229,8 @@
   }
 
   function calculatePayroll() {
-    // กำหนดรอบสัปดาห์ อังคาร - จันทร์
     const now = new Date();
-    const currentDay = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-    // รอบสัปดาห์เริ่มวันอังคาร (2)
+    const currentDay = now.getDay(); 
     const daysSinceTue = (currentDay + 5) % 7;
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - daysSinceTue);
@@ -254,13 +252,11 @@
       };
     });
 
-    // กรอง Log เฉพาะในรอบสัปดาห์
     const weeklyLogs = masterData.logs.filter(l => {
       const lDate = new Date(l.timestamp);
       return lDate >= startOfWeek && lDate <= endOfWeek;
     });
 
-    // จัดกลุ่ม Log ตามคนและวัน
     const dailyGroup = {};
     weeklyLogs.forEach(l => {
       const lDate = new Date(l.timestamp);
@@ -271,7 +267,6 @@
       if (l.type === 'ออกงาน' && (!dailyGroup[dayKey].out || lDate > dailyGroup[dayKey].out)) dailyGroup[dayKey].out = lDate;
     });
 
-    // ประมวลผลแต่ละวัน
     for (const key in dailyGroup) {
       const [name, dateStr] = key.split('_');
       if (!summary[name]) continue;
@@ -282,7 +277,6 @@
       if (dayData.in) {
         summary[name].daysWorked.add(dateStr);
         
-        // คำนวณมาสายเทียบกับ StartTime ใน Settings
         if (config.startTime) {
           const [targetH, targetM] = config.startTime.split(':');
           const targetTime = new Date(dayData.in);
@@ -294,14 +288,12 @@
           }
         }
 
-        // คำนวณชั่วโมงงาน (สำหรับพาร์ทไทม์)
         if (dayData.out && dayData.out > dayData.in) {
           summary[name].totalHours += (dayData.out - dayData.in) / (1000 * 60 * 60);
         }
       }
     }
 
-    // แสดงผลสรุป
     let totalPay = 0;
     let totalLatePay = 0;
     const tbody = document.getElementById('payroll-body');
@@ -313,7 +305,7 @@
         grossPay = s.totalHours * (s.config.rate || 0);
       }
 
-      const latePenalty = s.totalLateMinutes * 1; // หักนาทีละ 1 บาท
+      const latePenalty = s.totalLateMinutes * 1; 
       const netPay = Math.max(0, grossPay - latePenalty);
 
       totalPay += netPay;
