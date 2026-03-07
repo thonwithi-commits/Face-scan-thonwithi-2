@@ -21,7 +21,6 @@
     }
     .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
     
-    /* Login Section */
     #login-screen { display: flex; align-items: center; justify-content: center; height: 80vh; }
     .glass-box {
       background: var(--glass); backdrop-filter: blur(15px);
@@ -40,7 +39,6 @@
     }
     .tab.active { background: var(--accent); color: #000; font-weight: 600; }
 
-    /* Data Display */
     .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
     .info-card { background: var(--glass); border-radius: 16px; padding: 15px; border-left: 4px solid var(--accent); }
     .info-card small { opacity: 0.6; display: block; margin-bottom: 5px; }
@@ -62,7 +60,6 @@
     .late-tag { color: var(--danger); font-size: 12px; display: block; }
     .salary-tag { color: var(--success); font-weight: 600; }
 
-    /* Loading Overlay */
     #loading {
       position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8);
       display: none; align-items: center; justify-content: center; z-index: 2000;
@@ -74,7 +71,6 @@
 <div id="loading">กำลังประมวลผลข้อมูล...</div>
 
 <div class="container">
-  <!-- หน้าจอ Login -->
   <div id="login-screen">
     <div class="glass-box">
       <h2 style="margin-top:0">ระบบจัดการหลังบ้าน</h2>
@@ -84,7 +80,6 @@
     </div>
   </div>
 
-  <!-- หน้าจอหลัก Admin -->
   <div id="admin-content">
     <div class="header">
       <div>
@@ -106,7 +101,6 @@
       <div class="tab" onclick="switchTab('settings')">ตั้งค่าอัตราจ้าง & เวลาเข้างาน</div>
     </div>
 
-    <!-- รายงานเงินเดือน -->
     <div id="payroll-section" class="tab-content">
       <div class="data-card">
         <table id="payroll-table">
@@ -125,7 +119,6 @@
       </div>
     </div>
 
-    <!-- ประวัติแสกน -->
     <div id="logs-section" class="tab-content" style="display:none">
       <div class="data-card">
         <table id="logs-table">
@@ -141,7 +134,6 @@
       </div>
     </div>
 
-    <!-- ตั้งค่าพนักงาน -->
     <div id="settings-section" class="tab-content" style="display:none">
       <div class="data-card">
         <table id="settings-table">
@@ -162,7 +154,6 @@
 </div>
 
 <script>
-  // URL เว็บแอปจาก Google Script ของคุณ
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwBd8OsZFF2i44KrfCnGI7c9idmDakwWEgse9qt_WDOD5OOxG13eRaXf16SavEnP2oZ/exec"; 
   const ADMIN_PASS = "123";
 
@@ -198,7 +189,7 @@
       renderLogs();
       calculatePayroll();
     } catch (e) {
-      alert("ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบการ Deploy ใน Apps Script (ต้องเป็น Anyone)");
+      alert("ไม่สามารถดึงข้อมูลได้ โปรดตรวจสอบการเชื่อมต่อ");
     }
     document.getElementById('loading').style.display = 'none';
   }
@@ -211,7 +202,7 @@
         <td>${s.dept}</td>
         <td>${s.empType}</td>
         <td>${s.rate} ฿</td>
-        <td>${s.startTime} น.</td>
+        <td>${s.startTime || '-'}</td>
       </tr>
     `).join('');
     document.getElementById('stat-staff').innerText = masterData.settings.length;
@@ -244,8 +235,13 @@
 
     const summary = {};
     masterData.settings.forEach(s => {
-      summary[s.name] = { 
-        config: s, 
+      // แก้บั๊กที่ 2: ลบช่องว่างส่วนเกินออกจากประเภทการจ้าง
+      const cleanName = String(s.name || "").trim();
+      const cleanType = String(s.empType || "").trim();
+      const rateNum = parseFloat(s.rate) || 0;
+      
+      summary[cleanName] = { 
+        config: { ...s, empType: cleanType, name: cleanName, rate: rateNum }, 
         daysWorked: new Set(), 
         totalHours: 0, 
         totalLateMinutes: 0 
@@ -253,23 +249,37 @@
     });
 
     const weeklyLogs = masterData.logs.filter(l => {
-      const lDate = new Date(l.timestamp);
+      let safeTimestamp = String(l.timestamp).replace(' ', 'T');
+      let lDate = new Date(safeTimestamp);
+      if (isNaN(lDate)) lDate = new Date(l.timestamp); // Fallback
       return lDate >= startOfWeek && lDate <= endOfWeek;
     });
 
     const dailyGroup = {};
     weeklyLogs.forEach(l => {
-      const lDate = new Date(l.timestamp);
-      const dayKey = l.name + "_" + lDate.toISOString().split('T')[0];
+      let safeTimestamp = String(l.timestamp).replace(' ', 'T');
+      let lDate = new Date(safeTimestamp);
+      if (isNaN(lDate)) lDate = new Date(l.timestamp);
+      
+      // แก้บั๊กที่ 1: ลบคำว่า (Manual) ออกจากชื่อเพื่อจับคู่ให้ตรงกับ Settings
+      const cleanLogName = String(l.name).replace(/\(Manual\)/gi, '').trim();
+      
+      const dateStr = lDate.toLocaleDateString('en-CA'); // YYYY-MM-DD
+      const dayKey = cleanLogName + "_" + dateStr;
+      
       if (!dailyGroup[dayKey]) dailyGroup[dayKey] = { in: null, out: null };
       
-      if (l.type === 'เข้างาน' && (!dailyGroup[dayKey].in || lDate < dailyGroup[dayKey].in)) dailyGroup[dayKey].in = lDate;
-      if (l.type === 'ออกงาน' && (!dailyGroup[dayKey].out || lDate > dailyGroup[dayKey].out)) dailyGroup[dayKey].out = lDate;
+      if (l.type === 'เข้างาน' && (!dailyGroup[dayKey].in || lDate < dailyGroup[dayKey].in)) {
+          dailyGroup[dayKey].in = lDate;
+      }
+      if (l.type === 'ออกงาน' && (!dailyGroup[dayKey].out || lDate > dailyGroup[dayKey].out)) {
+          dailyGroup[dayKey].out = lDate;
+      }
     });
 
     for (const key in dailyGroup) {
       const [name, dateStr] = key.split('_');
-      if (!summary[name]) continue;
+      if (!summary[name]) continue; // ถ้าชื่อไม่มีใน Settings ให้ข้ามไป
 
       const dayData = dailyGroup[key];
       const config = summary[name].config;
@@ -277,14 +287,26 @@
       if (dayData.in) {
         summary[name].daysWorked.add(dateStr);
         
+        // แก้บั๊กที่ 3: ระบบอ่านเวลามาสาย (รองรับทุกฟอร์แมตจาก Google Sheets)
         if (config.startTime) {
-          const [targetH, targetM] = config.startTime.split(':');
-          const targetTime = new Date(dayData.in);
-          targetTime.setHours(parseInt(targetH), parseInt(targetM), 0, 0);
+          let startTimeStr = String(config.startTime).trim();
+          
+          // ถ้า Sheets แปลงเวลาเป็น Date (เช่น 1899-12-30T08:00:00) ให้สกัดเอาแค่เวลาออกมา
+          if (startTimeStr.includes('T')) {
+             const d = new Date(startTimeStr);
+             startTimeStr = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+          }
 
-          if (dayData.in > targetTime) {
-            const diffMs = dayData.in - targetTime;
-            summary[name].totalLateMinutes += Math.floor(diffMs / 60000);
+          if (startTimeStr.includes(':')) {
+            const [targetH, targetM] = startTimeStr.split(':');
+            const targetTime = new Date(dayData.in);
+            targetTime.setHours(parseInt(targetH), parseInt(targetM), 0, 0);
+
+            // ถ้าเวลาเข้างาน "มากกว่า" เวลาเข้างานที่ตั้งไว้ แปลว่าสาย!
+            if (dayData.in > targetTime) {
+              const diffMs = dayData.in - targetTime;
+              summary[name].totalLateMinutes += Math.floor(diffMs / 60000);
+            }
           }
         }
 
@@ -297,15 +319,17 @@
     let totalPay = 0;
     let totalLatePay = 0;
     const tbody = document.getElementById('payroll-body');
+    
     tbody.innerHTML = Object.values(summary).map(s => {
       let grossPay = 0;
       if (s.config.empType === "รายวัน") {
-        grossPay = s.daysWorked.size * (s.config.rate || 0);
+        grossPay = s.daysWorked.size * s.config.rate;
       } else {
-        grossPay = s.totalHours * (s.config.rate || 0);
+        // สำหรับรายชั่วโมง จะรวมยอดเมื่อกดสแกนออกงานแล้วเท่านั้น
+        grossPay = s.totalHours * s.config.rate;
       }
 
-      const latePenalty = s.totalLateMinutes * 1; 
+      const latePenalty = s.totalLateMinutes * 1; // หักนาทีละ 1 บาท
       const netPay = Math.max(0, grossPay - latePenalty);
 
       totalPay += netPay;
