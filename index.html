@@ -66,17 +66,22 @@
       position: relative;
       width: 100%;
       max-width: 400px;
+      height: 300px;
       margin: 0 auto 15px auto;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      background: #000;
+      display: none;
     }
 
     video { 
       width: 100%; 
-      border-radius: 16px; 
-      background: rgba(0,0,0,0.5); 
-      transform: scaleX(-1); 
-      display: none; 
-      border: 2px solid rgba(255, 255, 255, 0.3);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      height: 100%;
+      object-fit: cover;
+      transform: scale(1.7) scaleX(-1); 
+      display: block;
     }
 
     #status { 
@@ -164,6 +169,7 @@
       .glass-card { padding: 20px 15px; }
       #time { font-size: 40px; }
       .btn { padding: 14px; font-size: 16px; }
+      .video-container { height: 250px; }
     }
   </style>
 </head>
@@ -177,32 +183,28 @@
       <p id="date">วัน เดือน ปี</p>
     </div>
     
-    <div class="video-container">
+    <div class="video-container" id="video-box">
       <video id="video" autoplay muted playsinline></video>
     </div>
 
     <div id="status">กำลังโหลดระบบ...</div>
 
-    <!-- Multi-angle dots (2 มุม) -->
     <div class="progress-dots" id="reg-progress">
       <div class="dot"></div>
       <div class="dot"></div>
     </div>
 
-    <!-- ส่วน Admin -->
     <div id="register-ui">
       <input type="text" id="reg-name" placeholder="ระบุชื่อพนักงาน หรือ รหัส" class="input-field">
       <div class="btn-container" id="reg-btns">
         <button class="btn btn-in" style="width: 100%;" onclick="startManualRegistration()">เริ่มบันทึกใบหน้า (2 มุม)</button>
         <button class="btn btn-admin" style="width: 100%; background: rgba(121, 85, 72, 0.9); margin-top: 10px;" onclick="registerIdOnly()">ลงทะเบียนเฉพาะรหัส (Manual)</button>
       </div>
-      <!-- ปุ่มบันทึกภาพแบบกดเอง -->
       <div id="capture-ui" style="display:none; margin-top: 10px;">
         <button id="capture-btn" class="btn btn-capture" onclick="performCapture()">บันทึกภาพ</button>
       </div>
     </div>
 
-    <!-- ปุ่มเมนูหน้าแรก -->
     <div class="btn-container" id="menu-buttons" style="display:none;">
       <div class="btn-row">
         <button class="btn btn-in" onclick="startSystem('เข้างาน')">สแกนเข้างาน</button>
@@ -225,7 +227,6 @@
     let scanInterval = null;
     let isProcessing = false;
 
-    // สำหรับลงทะเบียน 2 มุม แบบกดเอง
     let regStep = 0;
     let regDescriptors = [];
     const regInstructions = [
@@ -236,19 +237,21 @@
     window.onload = async () => {
       updateClock();
       setInterval(updateClock, 1000);
+      const statusEl = document.getElementById('status');
       try {
         const MODEL_URL = 'https://justadudewhohacks.github.io/face-api.js/models';
+        statusEl.innerText = "กำลังโหลด AI Model...";
         await Promise.all([
           faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
           faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL)
         ]);
         modelsLoaded = true;
-        await fetchDatabase();
+        fetchDatabase(); // โหลดฐานข้อมูลแบบ Background
         document.getElementById('menu-buttons').style.display = 'flex';
-        document.getElementById('status').innerText = "กรุณาเลือกทำรายการ";
+        statusEl.innerText = "กรุณาเลือกทำรายการ";
       } catch (e) {
-        document.getElementById('status').innerText = "ผิดพลาด: โหลดข้อมูลไม่สำเร็จ";
+        statusEl.innerText = "ผิดพลาด: โหลดข้อมูลไม่สำเร็จ";
       }
     };
 
@@ -289,19 +292,32 @@
 
     async function startSystem(mode) {
       if (!modelsLoaded) { alert("ระบบกำลังโหลด... กรุณารอสักครู่"); return; }
+      const statusEl = document.getElementById('status');
       try {
         currentMode = mode;
         document.getElementById('menu-buttons').style.display = 'none';
-        document.getElementById('register-ui').style.display = 'none';
         document.getElementById('btn-cancel').style.display = 'inline-block';
-        document.getElementById('video').style.display = 'block';
-        document.getElementById('status').innerText = "กำลังตรวจสอบฐานข้อมูล...";
-        await fetchDatabase();
-        document.getElementById('status').innerText = `พร้อมสแกน! กรุณามองกล้องเพื่อ${mode}`;
-        document.getElementById('status').style.color = "#a5d6a7"; 
+        document.getElementById('video-box').style.display = 'block';
+        
+        statusEl.innerText = "กำลังเปิดกล้อง...";
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+        const videoEl = document.getElementById('video');
+        videoEl.srcObject = stream;
+        videoEl.play(); // บังคับให้วิดีโอเล่น
+
+        if (knownFaces.length === 0) {
+          statusEl.innerText = "กำลังดึงข้อมูลพนักงาน...";
+          await fetchDatabase();
+        }
+
+        statusEl.innerText = `พร้อมสแกน! กรุณามองกล้องเพื่อ${mode}`;
+        statusEl.style.color = "#a5d6a7"; 
         isProcessing = false;
         startScanning();
-      } catch (err) { alert("ไม่สามารถเปิดกล้องได้"); resetSystem(); }
+      } catch (err) {
+        alert("ไม่สามารถเปิดกล้องได้: " + err.message);
+        resetSystem();
+      }
     }
 
     function startScanning() {
@@ -347,12 +363,11 @@
         document.getElementById('menu-buttons').style.display = 'none';
         document.getElementById('btn-cancel').style.display = 'inline-block';
         document.getElementById('register-ui').style.display = 'block';
-        document.getElementById('video').style.display = 'none'; 
+        document.getElementById('video-box').style.display = 'none'; 
         document.getElementById('status').innerText = "โหมด Admin: ระบุชื่อพนักงาน";
       } else if (pass !== null) alert("รหัสผ่านไม่ถูกต้อง!");
     }
 
-    // --- ระบบลงทะเบียนแบบกดเอง (2 มุม) ---
     async function startManualRegistration() {
       const nameInput = document.getElementById('reg-name').value.trim();
       if (!nameInput) { alert("กรุณาระบุชื่อพนักงาน"); return; }
@@ -362,17 +377,22 @@
       document.getElementById('reg-btns').style.display = 'none';
       document.getElementById('reg-progress').style.display = 'flex';
       document.getElementById('capture-ui').style.display = 'block';
-      const videoEl = document.getElementById('video');
-      videoEl.style.display = 'block';
+      document.getElementById('video-box').style.display = 'block';
       
       const dots = document.querySelectorAll('.dot');
       dots.forEach(d => d.classList.remove('active'));
 
-      document.getElementById('status').innerText = "กำลังเปิดกล้อง...";
-      const stream = await navigator.mediaDevices.getUserMedia({ video: {} });
-      videoEl.srcObject = stream;
-      
-      document.getElementById('status').innerText = regInstructions[regStep];
+      try {
+        document.getElementById('status').innerText = "กำลังเปิดกล้อง...";
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+        const videoEl = document.getElementById('video');
+        videoEl.srcObject = stream;
+        videoEl.play();
+        document.getElementById('status').innerText = regInstructions[regStep];
+      } catch (e) {
+        alert("เปิดกล้องล้มเหลว");
+        resetSystem();
+      }
     }
 
     async function performCapture() {
@@ -436,7 +456,7 @@
       if(scanInterval) clearInterval(scanInterval);
       const videoEl = document.getElementById('video');
       if(videoEl.srcObject) videoEl.srcObject.getTracks().forEach(track => track.stop()); 
-      videoEl.style.display = 'none';
+      document.getElementById('video-box').style.display = 'none';
       document.getElementById('register-ui').style.display = 'none';
       document.getElementById('reg-progress').style.display = 'none';
       document.getElementById('capture-ui').style.display = 'none';
