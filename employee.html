@@ -7,98 +7,45 @@
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
-    :root {
-      --bg-dark: #2b1b17;
-      --card-inner: #3e2723;
-      --accent-gold: #ffc107;
-      --text-white: #fdfaf7;
-      --danger: #ff5252;
-      --success: #81c784;
-    }
-
-    body { 
-      font-family: 'Sarabun', sans-serif; 
-      margin: 0; padding: 0;
-      background-color: var(--bg-dark);
-      background-image: radial-gradient(circle at top right, #4e342e, #2b1b17);
-      color: var(--text-white);
-      min-height: 100vh;
-    }
-
+    :root { --bg-dark: #2b1b17; --card-inner: #3e2723; --accent-gold: #ffc107; --text-white: #fdfaf7; --danger: #ff5252; --success: #81c784; }
+    body { font-family: 'Sarabun', sans-serif; margin: 0; padding: 0; background-color: var(--bg-dark); background-image: radial-gradient(circle at top right, #4e342e, #2b1b17); color: var(--text-white); min-height: 100vh; }
     .container { width: 100%; max-width: 480px; margin: 0 auto; padding: 20px; box-sizing: border-box; }
-
-    /* --- Authentication --- */
     #login-screen { display: flex; align-items: center; justify-content: center; height: 85vh; }
-    .login-box {
-      background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px);
-      border-radius: 35px; padding: 50px 30px; text-align: center; width: 100%;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-    .badge {
-      width: 70px; height: 70px; background: var(--accent-gold); border-radius: 20px;
-      margin: 0 auto 25px; display: flex; align-items: center; justify-content: center;
-      font-size: 28px; color: var(--bg-dark); font-weight: 800;
-    }
-
-    .field {
-      width: 100%; padding: 18px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(0,0,0,0.3); color: white; font-size: 16px; box-sizing: border-box; margin-bottom: 20px; outline: none;
-    }
-    .btn-login {
-      width: 100%; padding: 18px; border-radius: 18px; border: none; font-weight: 700;
-      font-size: 16px; cursor: pointer; background: var(--accent-gold); color: var(--bg-dark);
-    }
-
-    /* --- Dashboard --- */
+    .login-box { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border-radius: 35px; padding: 50px 30px; text-align: center; width: 100%; border: 1px solid rgba(255,255,255,0.1); }
+    .badge { width: 70px; height: 70px; background: var(--accent-gold); border-radius: 20px; margin: 0 auto 25px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--bg-dark); font-weight: 800; }
+    .field { width: 100%; padding: 18px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: white; font-size: 16px; box-sizing: border-box; margin-bottom: 20px; outline: none; }
+    .btn-login { width: 100%; padding: 18px; border-radius: 18px; border: none; font-weight: 700; font-size: 16px; cursor: pointer; background: var(--accent-gold); color: var(--bg-dark); }
     #dashboard { display: none; animation: fadeIn 0.5s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
     .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
     .header h3 { margin: 0; font-size: 24px; color: var(--accent-gold); font-weight: 700; }
     .header p { margin: 3px 0 0 0; opacity: 0.6; font-size: 13px; }
     .btn-logout { background: none; border: none; color: var(--danger); font-weight: 700; font-size: 12px; cursor: pointer; }
-
-    .status-alert {
-      background: rgba(129, 199, 132, 0.1); color: var(--success); padding: 15px; border-radius: 20px;
-      margin-bottom: 20px; text-align: center; font-weight: 600; border: 1px solid rgba(129, 199, 132, 0.15);
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-    }
+    .status-alert { background: rgba(129, 199, 132, 0.1); color: var(--success); padding: 15px; border-radius: 20px; margin-bottom: 20px; text-align: center; font-weight: 600; border: 1px solid rgba(129, 199, 132, 0.15); display: flex; align-items: center; justify-content: center; gap: 8px; }
     .status-alert.warn { color: var(--accent-gold); background: rgba(255, 193, 7, 0.05); border-color: rgba(255, 193, 7, 0.1); }
     .status-alert.danger { color: var(--danger); background: rgba(255, 82, 82, 0.05); border-color: rgba(255, 82, 82, 0.1); }
-
-    .main-card {
-      background: rgba(255, 255, 255, 0.05); border-radius: 35px; padding: 40px 20px;
-      margin-bottom: 25px; text-align: center; border: 1px solid rgba(255,255,255,0.03);
-    }
+    .main-card { background: rgba(255, 255, 255, 0.05); border-radius: 35px; padding: 40px 20px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(255,255,255,0.03); }
     .main-card small { display: block; opacity: 0.6; font-size: 13px; margin-bottom: 5px; }
     .main-card strong { font-size: 48px; font-weight: 400; letter-spacing: -1px; }
-
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
     .tile { background: rgba(255, 255, 255, 0.04); border-radius: 25px; padding: 22px; border: 1px solid rgba(255,255,255,0.02); }
     .tile small { display: block; opacity: 0.4; font-size: 11px; margin-bottom: 8px; font-weight: 600; }
     .tile strong { font-size: 22px; font-weight: 400; }
-
     .logs-box { background: rgba(0,0,0,0.2); border-radius: 30px; padding: 10px; }
     .row { display: flex; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 13px; }
     .row:last-child { border-bottom: none; }
     .late-text { color: var(--danger); font-weight: 700; }
-
     #loader { position: fixed; inset: 0; background: var(--bg-dark); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
     .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,193,7,0.1); border-top-color: var(--accent-gold); border-radius: 50%; animation: rot 1s linear infinite; }
     @keyframes rot { to { transform: rotate(360deg); } }
-
     #slip-render { position: absolute; left: -9999px; }
   </style>
 </head>
 <body>
 
-<div id="loader">
-  <div class="spinner"></div>
-  <p style="margin-top: 20px; font-size: 12px; color: var(--accent-gold); letter-spacing: 2px;">กำลังดึงข้อมูลจาก Server...</p>
-</div>
+<div id="loader"><div class="spinner"></div><p style="margin-top: 20px; font-size: 12px; color: var(--accent-gold); letter-spacing: 2px;">กำลังประมวลผลข้อมูล...</p></div>
 
 <div class="container">
-  <!-- หน้าล็อกอิน -->
   <div id="login-screen">
     <div class="login-box">
       <div class="badge">TW</div>
@@ -110,7 +57,6 @@
     </div>
   </div>
 
-  <!-- หน้าแดชบอร์ด -->
   <div id="dashboard">
     <div class="header">
       <div>
@@ -119,27 +65,22 @@
       </div>
       <button onclick="location.reload()" class="btn-logout">ออกจากระบบ</button>
     </div>
-
     <div id="d-status" class="status-alert"></div>
-
     <div class="main-card">
       <small>รายรับสุทธิ (รอบ อังคาร-จันทร์)</small>
       <strong id="d-net">0.00 ฿</strong>
       <button onclick="exportSlip()" style="background:rgba(255, 255, 255, 0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:10px 20px; border-radius:15px; font-size:11px; margin-top:15px; cursor:pointer;">🖨️ บันทึกรูปสลิป</button>
     </div>
-
     <div class="grid">
       <div class="tile"><small>มาทำงาน</small><strong id="d-work">0 วัน</strong></div>
       <div class="tile"><small>มาสาย (ครั้ง)</small><strong id="d-late" style="color:var(--danger)">0 ครั้ง</strong></div>
       <div class="tile"><small>โบนัสพิเศษ</small><div id="d-bonus" style="font-size:22px;">0 ฿</div></div>
       <div class="tile"><small>เบี้ยขยัน (125฿)</small><strong id="d-inc">-</strong></div>
     </div>
-
     <div style="display:flex; justify-content:space-between; margin-bottom: 15px; padding: 0 5px;">
        <span style="font-size:14px; font-weight:700; color:var(--accent-gold);">ประวัติลงเวลาสัปดาห์นี้</span>
        <span id="week-display" style="font-size:11px; opacity:0.5;"></span>
     </div>
-    
     <div id="d-logs" class="logs-box"></div>
     <p style="text-align:center; font-size:10px; opacity:0.2; margin: 40px 0;">THONWITHI MANAGEMENT SYSTEM</p>
   </div>
@@ -154,41 +95,47 @@
 </div>
 
 <script>
-  // URL API อ้างอิงจากระบบปัจจุบันของคุณ
   const API_URL = "https://script.google.com/macros/s/AKfycbyfxj9FjtwLlFKGMsZm8eiEAkOXWOehQNl0xtkrR7UlNiT15D66vWIzONZbNDapRxLd/exec";
-  
-  const LATE_RATE = 5;
-  const GRACE_MS = 60000;
+  const LATE_RATE = 5, GRACE_MS = 60000;
   let user = null, stats = null;
 
-  function cleanName(n) {
-    return String(n || "").replace(/\(Manual\)/gi, '').replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, '').trim().toLowerCase();
+  function cleanName(n) { return String(n || "").replace(/\(Manual\)/gi, '').replace(/[\u200B-\u200D\uFEFF]/g, '').replace(/\s+/g, '').trim().toLowerCase(); }
+
+  function parseSheetDate(ts) {
+    if (!ts) return new Date(0);
+    let d = new Date(ts.replace(' ','T'));
+    if (!isNaN(d.getTime()) && d.getFullYear() > 2400) d.setFullYear(d.getFullYear() - 543);
+    
+    if (isNaN(d.getTime())) {
+      let parts = String(ts).split(' ');
+      let dParts = parts[0].split(parts[0].includes('/') ? '/' : '-');
+      if (dParts.length === 3) {
+        let day, month, year;
+        if (dParts[0].length === 4) { [year, month, day] = dParts; } else { [day, month, year] = dParts; }
+        year = parseInt(year); if (year > 2400) year -= 543;
+        d = new Date(year, parseInt(month) - 1, parseInt(day));
+        if (parts[1]) {
+          let tParts = parts[1].split(':');
+          d.setHours(tParts[0], tParts[1], tParts[2] || 0);
+        }
+      }
+    }
+    return d;
   }
 
   async function login() {
     const n = document.getElementById('user-name').value.trim();
     const p = document.getElementById('user-pass').value.trim();
     if(!n || !p) return;
-
     document.getElementById('loader').style.display = 'flex';
     try {
       const res = await fetch(`${API_URL}?action=getEmployeeSettings`);
       const data = await res.json();
-      
-      // ค้นหาพนักงานจากชื่อ
-      user = data.find(s => cleanName(s.name) === cleanName(n));
+      user = data.find(s => cleanName(s.name) === cleanName(n) || cleanName(s.name).includes(cleanName(n)));
 
-      // ตรวจสอบรหัสผ่าน: เทียบกับรหัสใน Google Sheets (หากช่องว่างในชีต จะเป็น 1234 อัตโนมัติจากฝั่ง Server)
-      if (user && p === user.password) { 
-         await loadDashboard();
-      } else {
-         alert("ชื่อพนักงานหรือรหัสผ่านไม่ถูกต้อง");
-         document.getElementById('loader').style.display = 'none';
-      }
-    } catch (e) { 
-      alert("⚠️ ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้"); 
-      document.getElementById('loader').style.display = 'none';
-    }
+      if (user && p === user.password) { await loadDashboard(); } 
+      else { alert("ชื่อพนักงานหรือรหัสผ่านไม่ถูกต้อง"); document.getElementById('loader').style.display = 'none'; }
+    } catch (e) { alert("⚠️ ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้"); document.getElementById('loader').style.display = 'none'; }
   }
 
   async function loadDashboard() {
@@ -196,32 +143,22 @@
       const res = await fetch(`${API_URL}?action=getLogs`);
       const allLogs = await res.json();
       
-      // คำนวณรอบสัปดาห์ (อังคาร - จันทร์) แบบเดียวกับหน้าแอดมิน Payroll
-      const n = new Date();
-      const cD = n.getDay();
-      const dST = (cD + 5) % 7;
-      const sD = new Date(n);
-      sD.setDate(n.getDate() - dST);
-      sD.setHours(0,0,0,0);
-      
-      const eD = new Date(sD);
-      eD.setDate(sD.getDate() + 6);
-      eD.setHours(23,59,59,999);
+      const n = new Date(); const cD = n.getDay(); const dST = (cD + 5) % 7;
+      const sD = new Date(n); sD.setDate(n.getDate() - dST); sD.setHours(0,0,0,0);
+      const eD = new Date(sD); eD.setDate(sD.getDate() + 6); eD.setHours(23,59,59,999);
 
       document.getElementById('week-display').innerText = `${sD.toLocaleDateString('th-TH')} - ${eD.toLocaleDateString('th-TH')}`;
 
-      // กรองประวัติพนักงานเฉพาะคนนี้ และอยู่ในช่วงเวลาอังคาร-จันทร์
       const weekLogs = allLogs.filter(l => {
         if (cleanName(l.name) !== cleanName(user.name)) return false;
-        let ld = new Date(String(l.timestamp).replace(' ','T')); 
-        if(isNaN(ld)) ld = new Date(l.timestamp);
+        let ld = parseSheetDate(l.timestamp);
         return ld >= sD && ld <= eD;
       });
 
       const daily = {};
       weekLogs.forEach(l => {
-        let ld = new Date(String(l.timestamp).replace(' ','T')); 
-        if(isNaN(ld)) ld = new Date(l.timestamp);
+        let ld = parseSheetDate(l.timestamp);
+        if(isNaN(ld.getTime())) return;
         const dS = ld.toISOString().split('T')[0];
         
         if(!daily[dS]) daily[dS] = { in:null, out:null };
@@ -234,13 +171,20 @@
         let d = daily[dS];
         if(d.in) {
           workD++;
+          // --- ระบบดักจับเวลาเข้างาน (แก้บัคการคำนวณมาสาย) ---
           if(user.startTime && user.startTime.includes(':')) {
-            const [th, tm] = user.startTime.split(':').map(Number);
-            const target = new Date(d.in); target.setHours(th, tm, 0, 0);
-            const diffMs = d.in - target;
-            if(diffMs > GRACE_MS) { 
-              lateM += Math.ceil(diffMs/60000); 
-              lateC++; 
+            const timeMatch = user.startTime.match(/(\d{1,2}):(\d{2})/);
+            if (timeMatch) {
+              const th = parseInt(timeMatch[1], 10);
+              const tm = parseInt(timeMatch[2], 10);
+              const target = new Date(d.in); 
+              target.setHours(th, tm, 0, 0);
+              
+              const diffMs = d.in - target;
+              if(diffMs > GRACE_MS) { 
+                lateM += Math.ceil(diffMs/60000); 
+                lateC++; 
+              }
             }
           }
           if(d.out && d.out > d.in) hrs += (d.out - d.in)/3600000;
@@ -263,7 +207,7 @@
 
       stats = { net, workD, lateC, bonus, inc, gross, lateM, advance };
 
-      document.getElementById('d-name').innerText = "สวัสดี, คุณ" + user.name;
+      document.getElementById('d-name').innerText = "สวัสดี, " + user.name;
       document.getElementById('d-dept').innerText = "แผนก: " + (user.dept || "ทั่วไป");
       document.getElementById('d-net').innerText = net.toLocaleString(undefined, {minimumFractionDigits:2}) + " ฿";
       document.getElementById('d-work').innerText = workD + " วัน";
@@ -277,16 +221,18 @@
       
       document.getElementById('d-inc').innerText = inc > 0 ? "ได้รับ ✅" : "ไม่ได้ ❌";
 
-      // แสดงประวัติ (เรียงจากล่าสุดลงมา)
+      // ส่วนแสดงประวัติล่าสุด
       document.getElementById('d-logs').innerHTML = weekLogs.slice().reverse().map(l => {
-        let ld = new Date(String(l.timestamp).replace(' ','T')); 
-        if(isNaN(ld)) ld = new Date(l.timestamp);
-        
+        let ld = parseSheetDate(l.timestamp);
         let isLate = false;
+        
         if (l.type.includes('เข้า') && user.startTime) {
-            const [th, tm] = user.startTime.split(':').map(Number);
-            const target = new Date(ld); target.setHours(th, tm, 0, 0);
-            if (ld - target > GRACE_MS) isLate = true;
+            const timeMatch = user.startTime.match(/(\d{1,2}):(\d{2})/);
+            if(timeMatch) {
+              const target = new Date(ld); 
+              target.setHours(parseInt(timeMatch[1], 10), parseInt(timeMatch[2], 10), 0, 0);
+              if (ld - target > GRACE_MS) isLate = true;
+            }
         }
         
         const dateStr = ld.toLocaleDateString('th-TH', {day:'numeric', month:'short'});
