@@ -172,7 +172,7 @@
 </div>
 
 <script>
-  // เปลี่ยนเป็น URL ของคุณ
+  // !!! ตรวจสอบว่า URL นี้คือ URL ปัจจุบันจากการ Deploy (Anyone) หรือไม่ !!!
   const API_URL = "https://script.google.com/macros/s/AKfycbyfxj9FjtwLlFKGMsZm8eiEAkOXWOehQNl0xtkrR7UlNiT15D66vWIzONZbNDapRxLd/exec";
   const LATE_RATE = 5, GRACE = 60000;
   let currentUser = null, currentStats = null;
@@ -184,7 +184,11 @@
 
     document.getElementById('loading-overlay').style.display = 'flex';
     try {
-      const res = await fetch(`${API_URL}?action=getEmployeeSettings`);
+      const fetchUrl = `${API_URL}?action=getEmployeeSettings`;
+      const res = await fetch(fetchUrl);
+      
+      if (!res.ok) throw new Error("Server response not OK");
+      
       const settings = await res.json();
       const found = settings.find(s => s.name.replace(/\s+/g,'').toLowerCase() === n.replace(/\s+/g,'').toLowerCase());
 
@@ -194,72 +198,86 @@
          alert("ชื่อพนักงานหรือรหัสผ่านไม่ถูกต้อง");
          document.getElementById('loading-overlay').style.display = 'none';
       }
-    } catch (e) { alert("เชื่อมต่อ API ล้มเหลว"); document.getElementById('loading-overlay').style.display = 'none'; }
+    } catch (e) { 
+      console.error("Login Error:", e);
+      alert("เชื่อมต่อ API ล้มเหลว\n\nสาเหตุ: " + e.message + "\n\nคำแนะนำ: ตรวจสอบว่าได้ตั้งค่าการ Deploy เป็น 'Anyone' ใน Google Apps Script แล้ว"); 
+      document.getElementById('loading-overlay').style.display = 'none'; 
+    }
   }
 
   async function loadDashboard() {
-    document.getElementById('ui-name').innerText = "สวัสดี, " + currentUser.name;
-    document.getElementById('ui-dept').innerText = "ฝ่าย: " + (currentUser.dept || "ทั่วไป");
+    try {
+      document.getElementById('ui-name').innerText = "สวัสดี, " + currentUser.name;
+      document.getElementById('ui-dept').innerText = "ฝ่าย: " + (currentUser.dept || "ทั่วไป");
 
-    const res = await fetch(`${API_URL}?action=getLogs`);
-    const allLogs = await res.json();
-    
-    const now = new Date();
-    const start = new Date(now); start.setDate(now.getDate() - ((now.getDay() + 5) % 7)); start.setHours(0,0,0,0);
-    
-    const myLogs = allLogs.filter(l => l.name.replace(/\s+/g,'').toLowerCase() === currentUser.name.replace(/\s+/g,'').toLowerCase());
-    const weekLogs = myLogs.filter(l => new Date(l.timestamp.replace(' ','T')) >= start);
+      const res = await fetch(`${API_URL}?action=getLogs`);
+      if (!res.ok) throw new Error("Logs data not OK");
+      const allLogs = await res.json();
+      
+      const now = new Date();
+      const start = new Date(now); start.setDate(now.getDate() - ((now.getDay() + 5) % 7)); start.setHours(0,0,0,0);
+      
+      const myLogs = allLogs.filter(l => l.name.replace(/\s+/g,'').toLowerCase() === currentUser.name.replace(/\s+/g,'').toLowerCase());
+      const weekLogs = myLogs.filter(l => {
+        let ld = new Date(l.timestamp.replace(' ','T')); if(isNaN(ld)) ld = new Date(l.timestamp);
+        return ld >= start;
+      });
 
-    const daily = {};
-    weekLogs.forEach(l => {
-      const dS = l.timestamp.split(' ')[0];
-      const dt = new Date(l.timestamp.replace(' ','T'));
-      if(!daily[dS]) daily[dS] = { in:null, out:null };
-      if(l.type.includes('เข้า') && (!daily[dS].in || dt < daily[dS].in)) daily[dS].in = dt;
-      if(l.type.includes('ออก') && (!daily[dS].out || dt > daily[dS].out)) daily[dS].out = dt;
-    });
+      const daily = {};
+      weekLogs.forEach(l => {
+        const dS = l.timestamp.split(' ')[0];
+        const dt = new Date(l.timestamp.replace(' ','T'));
+        if(!daily[dS]) daily[dS] = { in:null, out:null };
+        if(l.type.includes('เข้า') && (!daily[dS].in || dt < daily[dS].in)) daily[dS].in = dt;
+        if(l.type.includes('ออก') && (!daily[dS].out || dt > daily[dS].out)) daily[dS].out = dt;
+      });
 
-    let lateM = 0, lateC = 0, workD = 0, hrs = 0;
-    for(let d in daily) {
-      if(daily[d].in) {
-        workD++;
-        if(currentUser.startTime && currentUser.startTime.includes(':')) {
-          const [th, tm] = currentUser.startTime.split(':').map(Number);
-          const target = new Date(daily[d].in); target.setHours(th, tm, 0, 0);
-          if(daily[d].in - target > GRACE) { lateM += Math.ceil((daily[d].in - target)/60000); lateC++; }
+      let lateM = 0, lateC = 0, workD = 0, hrs = 0;
+      for(let d in daily) {
+        if(daily[d].in) {
+          workD++;
+          if(currentUser.startTime && currentUser.startTime.includes(':')) {
+            const [th, tm] = currentUser.startTime.split(':').map(Number);
+            const target = new Date(daily[d].in); target.setHours(th, tm, 0, 0);
+            if(daily[d].in - target > GRACE) { lateM += Math.ceil((daily[d].in - target)/60000); lateC++; }
+          }
+          if(daily[d].out > daily[d].in) hrs += (daily[d].out - daily[d].in)/3600000;
         }
-        if(daily[d].out > daily[d].in) hrs += (daily[d].out - daily[d].in)/3600000;
       }
+
+      const hud = document.getElementById('status-card-ui');
+      let eligibleBonus = true;
+      if(lateC === 0) { hud.className = "status-hud hud-safe"; hud.innerHTML = "STATUS: EXCELLENT ✅"; }
+      else if(lateC <= 2) { hud.className = "status-hud hud-warn"; hud.innerHTML = `STATUS: WARNING (ใบเหลืองที่ ${lateC}) 🟨`; }
+      else { hud.className = "status-hud hud-danger"; hud.innerHTML = "STATUS: DISCIPLINARY RED 🟥"; eligibleBonus = false; }
+
+      const rate = parseFloat(currentUser.rate) || 0;
+      const gross = (currentUser.empType || "").includes("รายวัน") ? (workD * rate) : (hrs * rate);
+      const inc = (lateC === 0 && workD > 0) ? 125 : 0;
+      const bonus = eligibleBonus ? parseFloat(currentUser.bonus) : 0;
+      const advance = parseFloat(currentUser.advance) || 0;
+      const net = Math.max(0, gross + bonus + inc - (lateM * LATE_RATE) - advance);
+
+      currentStats = { net, workD, lateC, bonus, inc, gross, lateM, advance };
+
+      document.getElementById('ui-net').innerText = net.toLocaleString(undefined, {minimumFractionDigits:2}) + " ฿";
+      document.getElementById('ui-work').innerText = workD + " วัน";
+      document.getElementById('ui-late').innerText = lateC + " ครั้ง";
+      document.getElementById('ui-bonus').innerHTML = eligibleBonus ? (bonus + " ฿") : `<span style="text-decoration:line-through; opacity:0.3;">${currentUser.bonus}</span> <span style="color:var(--danger-glow)">0 ฿</span>`;
+      document.getElementById('ui-inc').innerText = inc > 0 ? "Qualified ✅" : "Voided ❌";
+
+      document.getElementById('ui-logs').innerHTML = weekLogs.slice().reverse().map(l => 
+        `<div class="log-item"><span>${l.timestamp.split(' ')[0]}</span><span style="font-weight:700;">${l.type}</span><span style="opacity:0.6;">${l.timestamp.split(' ')[1]}</span></div>`
+      ).join('') || "<p style='text-align:center; opacity:0.2; padding:20px;'>NO DATA</p>";
+
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('employee-dashboard').style.display = 'block';
+    } catch (e) {
+      console.error("Dashboard Load Error:", e);
+      alert("โหลดข้อมูลล้มเหลว: " + e.message);
+    } finally {
+      document.getElementById('loading-overlay').style.display = 'none';
     }
-
-    const hud = document.getElementById('status-card-ui');
-    let eligibleBonus = true;
-    if(lateC === 0) { hud.className = "status-hud hud-safe"; hud.innerHTML = "STATUS: EXCELLENT ✅"; }
-    else if(lateC <= 2) { hud.className = "status-hud hud-warn"; hud.innerHTML = `STATUS: WARNING (ใบเหลืองที่ ${lateC}) 🟨`; }
-    else { hud.className = "status-hud hud-danger"; hud.innerHTML = "STATUS: DISCIPLINARY RED 🟥"; eligibleBonus = false; }
-
-    const rate = parseFloat(currentUser.rate) || 0;
-    const gross = (currentUser.empType || "").includes("รายวัน") ? (workD * rate) : (hrs * rate);
-    const inc = (lateC === 0 && workD > 0) ? 125 : 0;
-    const bonus = eligibleBonus ? parseFloat(currentUser.bonus) : 0;
-    const advance = parseFloat(currentUser.advance) || 0;
-    const net = Math.max(0, gross + bonus + inc - (lateM * LATE_RATE) - advance);
-
-    currentStats = { net, workD, lateC, bonus, inc, gross, lateM, advance };
-
-    document.getElementById('ui-net').innerText = net.toLocaleString(undefined, {minimumFractionDigits:2}) + " ฿";
-    document.getElementById('ui-work').innerText = workD + " วัน";
-    document.getElementById('ui-late').innerText = lateC + " ครั้ง";
-    document.getElementById('ui-bonus').innerHTML = eligibleBonus ? (bonus + " ฿") : `<span style="text-decoration:line-through; opacity:0.3;">${currentUser.bonus}</span> <span style="color:var(--danger-glow)">0 ฿</span>`;
-    document.getElementById('ui-inc').innerText = inc > 0 ? "Qualified ✅" : "Voided ❌";
-
-    document.getElementById('ui-logs').innerHTML = weekLogs.slice().reverse().map(l => 
-      `<div class="log-item"><span>${l.timestamp.split(' ')[0]}</span><span style="font-weight:700;">${l.type}</span><span style="opacity:0.6;">${l.timestamp.split(' ')[1]}</span></div>`
-    ).join('') || "<p style='text-align:center; opacity:0.2; padding:20px;'>NO DATA</p>";
-
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('employee-dashboard').style.display = 'block';
-    document.getElementById('loading-overlay').style.display = 'none';
   }
 
   function downloadSlip() {
@@ -280,6 +298,9 @@
     document.getElementById('slip-content').innerHTML = html;
     html2canvas(document.getElementById('slip-template'), {scale:2}).then(cvs => {
       const a = document.createElement('a'); a.download = `Slip_Thonwithi_${currentUser.name}.png`; a.href = cvs.toDataURL(); a.click();
+      document.getElementById('loading-overlay').style.display = 'none';
+    }).catch(e => {
+      alert("สร้างรูปภาพล้มเหลว");
       document.getElementById('loading-overlay').style.display = 'none';
     });
   }
