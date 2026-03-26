@@ -17,7 +17,7 @@
       --success: #10b981;
       --danger: #ef4444;
       --warning: #f59e0b;
-      --shadow: 0 15px 35px rgba(0,0,0,0.1);
+      --shadow: 0 15px 35px rgba(0,0,0,0.15);
     }
 
     body { 
@@ -32,14 +32,14 @@
 
     .container { width: 100%; max-width: 480px; margin: 0 auto; padding: 25px; box-sizing: border-box; }
 
-    /* Login UI */
+    /* --- Authentication UI --- */
     #login-screen { flex: 1; display: flex; align-items: center; justify-content: center; }
     .login-box {
       background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px);
       border-radius: 40px; padding: 50px 30px; text-align: center; width: 100%;
       border: 1px solid rgba(255,255,255,0.1);
     }
-    .logo {
+    .logo-circle {
       width: 80px; height: 80px; background: var(--card-bg); border-radius: 25px;
       margin: 0 auto 30px; display: flex; align-items: center; justify-content: center;
       font-size: 32px; color: var(--accent); font-weight: 800;
@@ -59,48 +59,57 @@
       background: var(--card-bg); color: var(--accent);
     }
 
-    /* Dashboard UI */
+    /* --- Dashboard UI --- */
     #employee-dashboard { display: none; }
     
     .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
     .welcome-text h3 { margin: 0; font-size: 24px; font-weight: 700; color: white; }
     .welcome-text p { margin: 5px 0 0 0; font-size: 12px; color: var(--accent-gold); font-weight: 600; }
 
+    /* Balance Card */
     .balance-card {
       background: linear-gradient(135deg, #3e2723 0%, #1a0f0d 100%);
       border-radius: 35px; padding: 40px 30px; margin-bottom: 25px;
       position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);
-      box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+      box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+    }
+    .balance-card::after {
+      content: 'VISA'; position: absolute; top: 30px; right: 30px; font-weight: 800; font-style: italic; opacity: 0.1; font-size: 22px;
     }
     .balance-card small { display: block; opacity: 0.6; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 10px; }
     .balance-card strong { font-size: 42px; font-weight: 800; color: var(--accent-gold); letter-spacing: -1.5px; }
 
+    /* Disciplinary HUD */
     .status-badge {
       padding: 12px 20px; border-radius: 15px; margin-bottom: 25px; text-align: center;
       font-weight: 700; font-size: 12px; border: 1px solid rgba(255,255,255,0.05);
     }
     .safe { background: rgba(16, 185, 129, 0.1); color: var(--success); }
     .warn { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
-    .danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); animation: pulse 2s infinite; }
+    .danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); animation: pulse 2s infinite; }
 
+    /* Stats Grid */
     .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
     .stat-item { background: var(--card-bg); border-radius: 25px; padding: 22px; color: var(--text-dark); box-shadow: var(--shadow); }
     .stat-item small { display: block; color: var(--text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
     .stat-item strong { font-size: 20px; font-weight: 800; }
 
-    .history-card { background: var(--card-bg); border-radius: 30px; padding: 10px; color: var(--text-dark); box-shadow: var(--shadow); }
+    /* History List */
+    .history-card { background: var(--card-bg); border-radius: 30px; padding: 10px; color: var(--text-dark); box-shadow: var(--shadow); margin-bottom: 30px; }
     .log-entry {
       display: flex; justify-content: space-between; align-items: center;
       padding: 15px 20px; border-bottom: 1px solid #f0f0f0;
     }
     .log-entry:last-child { border-bottom: none; }
-    .log-entry .date { font-size: 13px; color: var(--text-muted); }
-    .log-entry .type { font-weight: 700; font-size: 14px; }
-    .log-entry .time { font-weight: 800; color: var(--accent); }
+    .log-entry .date { font-size: 12px; color: var(--text-muted); }
+    .log-entry .type { font-weight: 700; font-size: 14px; color: var(--accent); }
+    .log-entry .time { font-weight: 800; color: var(--text-dark); }
     .late-time { color: var(--danger) !important; text-decoration: underline; }
 
-    #loader { position: fixed; inset: 0; background: var(--bg-main); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+    /* Utilities */
+    #loader { position: fixed; inset: 0; background: var(--bg-main); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 5000; }
     .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.05); border-top-color: var(--accent-gold); border-radius: 50%; animation: spin 1s linear infinite; }
+    
     @keyframes spin { to { transform: rotate(360deg); } }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
 
@@ -111,87 +120,91 @@
 
 <div id="loader">
   <div class="spinner"></div>
-  <p style="margin-top: 20px; font-weight: 700; font-size: 12px; letter-spacing: 3px; color: var(--accent-gold);">SYSTEM SYNCING...</p>
+  <p style="margin-top: 20px; font-weight: 700; font-size: 12px; letter-spacing: 3px; color: var(--accent-gold);">SYNCHRONIZING...</p>
 </div>
 
 <div class="container">
+  <!-- Login Section -->
   <div id="login-screen">
     <div class="login-box">
-      <div class="logo">TW</div>
+      <div class="logo-circle">TW</div>
       <h2 style="margin:0;">THONWITHI</h2>
       <p style="opacity: 0.4; font-size: 11px; margin-bottom: 40px; letter-spacing: 4px;">EMPLOYEE PORTAL</p>
       
       <div class="input-group">
-        <label>Username</label>
-        <input type="text" id="name-in" class="neo-field" placeholder="ชื่อพนักงาน">
+        <label>ชื่อพนักงาน (ชื่อเล่น)</label>
+        <input type="text" id="name-in" class="neo-field" placeholder="ระบุชื่อเล่นภาษาไทย">
       </div>
       <div class="input-group" style="margin-bottom: 40px;">
-        <label>Access Code</label>
+        <label>รหัสผ่าน</label>
         <input type="password" id="pass-in" class="neo-field" placeholder="••••">
       </div>
-      <button class="btn-primary" onclick="handleLogin()">เข้าสู่ระบบ</button>
+      <button class="btn-primary" onclick="handleLogin()">ยืนยันตัวตน</button>
     </div>
   </div>
 
+  <!-- Dashboard Section -->
   <div id="employee-dashboard">
     <div class="header">
       <div class="welcome-text">
         <h3 id="ui-name">สวัสดี</h3>
         <p id="ui-dept">ฝ่ายปฏิบัติการ</p>
       </div>
-      <button onclick="location.reload()" style="background:none; border:none; color:var(--danger); font-weight:700; font-size:12px; cursor:pointer;">ออกจากระบบ</button>
+      <button onclick="location.reload()" style="background:none; border:none; color:var(--danger); font-weight:700; font-size:12px; cursor:pointer;">LOGOUT</button>
     </div>
 
     <div id="status-ui" class="status-badge"></div>
 
     <div class="balance-card">
-      <small>ยอดรายได้โดยประมาณ</small>
+      <small>Estimated Net Income</small>
       <strong id="ui-net">0.00 ฿</strong>
       <div style="margin-top: 30px;">
-        <button onclick="exportSlip()" style="background:var(--accent-gold); color:white; border:none; padding:10px 25px; border-radius:15px; font-weight:700; font-size:11px; cursor:pointer;">บันทึกรูปสลิป</button>
+        <button onclick="exportSlip()" style="background:var(--accent-gold); color:white; border:none; padding:10px 25px; border-radius:15px; font-weight:700; font-size:11px; cursor:pointer;">SAVE SLIP IMAGE</button>
       </div>
     </div>
 
     <div class="stats-grid">
-      <div class="stat-item"><small>มาทำงาน</small><strong id="ui-work">0 วัน</strong></div>
-      <div class="stat-item"><small>มาสาย</small><strong id="ui-late" style="color:var(--danger)">0 ครั้ง</strong></div>
-      <div class="stat-item"><small>โบนัสรวม</small><div id="ui-bonus" style="font-weight:800;">0 ฿</div></div>
-      <div class="stat-item"><small>เบี้ยขยัน</small><strong id="ui-inc">-</strong></div>
+      <div class="stat-item"><small>Attendance</small><strong id="ui-work">0 วัน</strong></div>
+      <div class="stat-item"><small>Late Frequency</small><strong id="ui-late" style="color:var(--danger)">0 ครั้ง</strong></div>
+      <div class="stat-item"><small>Performance Bonus</small><div id="ui-bonus" style="font-weight:800;">0 ฿</div></div>
+      <div class="stat-item"><small>Incentive</small><strong id="ui-inc">-</strong></div>
     </div>
 
-    <p style="font-size:12px; font-weight:800; color:var(--accent-gold); text-transform:uppercase; margin-bottom: 15px;">ประวัติการเข้างานล่าสุด</p>
+    <p style="font-size:12px; font-weight:800; color:var(--accent-gold); text-transform:uppercase; margin-bottom: 15px; letter-spacing: 1px;">Recent Time Logs</p>
     <div id="ui-logs" class="history-card"></div>
-    <p style="text-align:center; font-size:10px; opacity:0.2; margin: 40px 0;">THONWITHI MANAGEMENT SYSTEM V2</p>
+    
+    <p style="text-align:center; font-size:10px; opacity:0.2; margin: 40px 0;">THONWITHI MANAGEMENT SYSTEM V2.5</p>
   </div>
 </div>
 
 <div id="slip-render-area">
   <div id="slip-template" style="width: 500px; background: white; color: #111; padding: 70px; font-family: 'Sarabun'; border: 1px solid #eee;">
     <h1 style="text-align:center; margin:0; color:#3e2723;">Thonwithi Cafe</h1>
-    <p style="text-align:center; border-bottom:2px solid #3e2723; padding-bottom:25px; color:#777;">สรุปรายได้พนักงาน</p>
+    <p style="text-align:center; border-bottom:2px solid #3e2723; padding-bottom:25px; color:#777;">ใบแจ้งยอดรายได้พนักงาน</p>
     <div id="slip-body"></div>
   </div>
 </div>
 
 <script>
-  // URL ของคุณ
+  // API URL จากคำร้องขอ
   const API_URL = "https://script.google.com/macros/s/AKfycbyfxj9FjtwLlFKGMsZm8eiEAkOXWOehQNl0xtkrR7UlNiT15D66vWIzONZbNDapRxLd/exec";
-  const LATE_RATE = 5, GRACE = 60000;
-  let user = null, stats = null;
+  const LATE_RATE = 5, GRACE_PERIOD_MS = 60000;
+  let user = null, currentStats = null;
+
+  // ป้องกันการ Error จากค่า undefined
+  function clean(str) {
+    if (!str) return "";
+    return String(str).replace(/\s+/g,'').toLowerCase();
+  }
 
   async function callAPI(action) {
     const url = `${API_URL}?action=${action}`;
     try {
-      const response = await fetch(url, {
-        method: 'GET',
-        mode: 'cors',
-        cache: 'no-cache',
-        redirect: 'follow'
-      });
+      const response = await fetch(url, { method: 'GET', mode: 'cors', cache: 'no-cache' });
       if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
       return await response.json();
     } catch (e) {
-      console.error("API Call Failed:", e);
+      console.error("API Error:", e);
       throw e;
     }
   }
@@ -204,7 +217,7 @@
     document.getElementById('loader').style.display = 'flex';
     try {
       const settings = await callAPI('getEmployeeSettings');
-      const found = settings.find(s => s.name.replace(/\s+/g,'').toLowerCase() === n.replace(/\s+/g,'').toLowerCase());
+      const found = settings.find(s => clean(s.name) === clean(n));
 
       if (found && p === "1234") { 
          user = found; await renderDashboard();
@@ -213,24 +226,28 @@
          document.getElementById('loader').style.display = 'none';
       }
     } catch (e) { 
-      alert("⚠️ ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้\n\nสาเหตุ: " + e.message + "\n\nวิธีแก้: ลองเปิดลิงก์ API ในแท็บใหม่เพื่อกดยอมรับสิทธิ์ของ Google ก่อนครับ"); 
+      alert("⚠️ ไม่สามารถเชื่อมต่อกับ API ได้\n\nวิธีแก้: เปิดลิ้งก์ API ใน Browser แล้วกดยืนยันสิทธิ์ก่อนครับ"); 
       document.getElementById('loader').style.display = 'none';
     }
   }
 
   async function renderDashboard() {
-    document.getElementById('ui-name').innerText = "สวัสดี, คุณ" + user.name;
+    document.getElementById('ui-name').innerText = user.name;
     document.getElementById('ui-dept').innerText = user.dept || "ทั่วไป";
 
     try {
       const logs = await callAPI('getLogs');
-      const now = new Date();
-      const start = new Date(now); start.setDate(now.getDate() - ((now.getDay() + 5) % 7)); start.setHours(0,0,0,0);
       
-      const myLogs = logs.filter(l => l.name.replace(/\s+/g,'').toLowerCase() === user.name.replace(/\s+/g,'').toLowerCase());
+      // คำนวณรอบสัปดาห์ (อังคาร-จันทร์)
+      const now = new Date();
+      const start = new Date(now); 
+      start.setDate(now.getDate() - ((now.getDay() + 5) % 7)); 
+      start.setHours(0,0,0,0);
+      
+      const myLogs = logs.filter(l => clean(l.name) === clean(user.name));
       const weekLogs = myLogs.filter(l => {
-        let ts = l.timestamp;
-        if (ts.includes('/')) { // กรณีเป็นรูปแบบ d/M/yyyy HH:mm:ss
+        let ts = String(l.timestamp || "");
+        if (ts.includes('/')) { // แปลง d/M/yyyy เป็น ISO
            let parts = ts.split(' ');
            let dParts = parts[0].split('/');
            ts = `${dParts[2]}-${dParts[1]}-${dParts[0]}T${parts[1]}`;
@@ -240,6 +257,7 @@
 
       const daily = {};
       weekLogs.forEach(l => {
+        if (!l.timestamp) return;
         const dS = l.timestamp.split(' ')[0];
         const dt = new Date(l.timestamp.replace(' ','T'));
         if(!daily[dS]) daily[dS] = { in:null, out:null };
@@ -254,17 +272,18 @@
           if(user.startTime && user.startTime.includes(':')) {
             const [th, tm] = user.startTime.split(':').map(Number);
             const target = new Date(daily[d].in); target.setHours(th, tm, 0, 0);
-            if(daily[d].in - target > GRACE) { lateM += Math.ceil((daily[d].in - target)/60000); lateC++; }
+            const diff = daily[d].in - target;
+            if(diff > GRACE_PERIOD_MS) { lateM += Math.ceil(diff/60000); lateC++; }
           }
           if(daily[d].out > daily[d].in) hrs += (daily[d].out - daily[d].in)/3600000;
         }
       }
 
-      const statusBox = document.getElementById('status-ui');
+      const hud = document.getElementById('status-ui');
       let eligibleBonus = true;
-      if(lateC === 0) { statusBox.className = "status-badge safe"; statusBox.innerHTML = "✨ วินัยเยี่ยมมาก! สัปดาห์นี้ไม่สายเลย"; }
-      else if(lateC <= 2) { statusBox.className = "status-badge warn"; statusBox.innerHTML = `🟨 ใบเหลือง: สาย ${lateC} ครั้งแล้วนะ`; }
-      else { statusBox.className = "status-badge danger"; statusBox.innerHTML = "🟥 ใบแดง: สายเกินกำหนด ติดต่อผู้จัดการ"; eligibleBonus = false; }
+      if(lateC === 0) { hud.className = "status-badge safe"; hud.innerHTML = "✨ PERFORMANCE: EXCELLENT"; }
+      else if(lateC <= 2) { hud.className = "status-badge warn"; hud.innerHTML = `🟨 STATUS: WARNING (${lateC} LATE)`; }
+      else { hud.className = "status-badge danger"; hud.innerHTML = "🟥 DISCIPLINARY RED: NO BONUS"; eligibleBonus = false; }
 
       const rate = parseFloat(user.rate) || 0;
       const gross = (user.empType || "").includes("รายวัน") ? (workD * rate) : (hrs * rate);
@@ -272,23 +291,21 @@
       const bonus = eligibleBonus ? (parseFloat(user.bonus) || 0) : 0;
       const net = Math.max(0, gross + bonus + inc - (lateM * LATE_RATE) - (parseFloat(user.advance) || 0));
 
-      stats = { net, workD, lateC, bonus, inc, gross, lateM };
+      currentStats = { net, workD, lateC, bonus, inc, gross, lateM };
 
       document.getElementById('ui-net').innerText = net.toLocaleString(undefined, {minimumFractionDigits:2}) + " ฿";
       document.getElementById('ui-work').innerText = workD + " วัน";
       document.getElementById('ui-late').innerText = lateC + " ครั้ง";
-      document.getElementById('ui-bonus').innerHTML = eligibleBonus ? (bonus.toLocaleString() + " ฿") : `<span style="text-decoration:line-through; opacity:0.3;">${user.bonus}</span> <span style="color:var(--danger)">0 ฿</span>`;
+      document.getElementById('ui-bonus').innerHTML = eligibleBonus ? (bonus.toLocaleString() + " ฿") : `<span style="text-decoration:line-through; opacity:0.3;">${(user.bonus || 0).toLocaleString()}</span> <span style="color:var(--danger)">0 ฿</span>`;
       document.getElementById('ui-inc').innerText = inc > 0 ? "ได้รับ ✅" : "ไม่ได้ ❌";
 
       document.getElementById('ui-logs').innerHTML = weekLogs.slice().reverse().map(l => {
         return `<div class="log-entry"><span class="date">${l.timestamp.split(' ')[0]}</span><span class="type">ลงเวลา</span><span class="time">${l.timestamp.split(' ')[1]}</span></div>`;
-      }).join('') || "<p style='text-align:center; padding:20px; font-size:12px; color:#aaa;'>ไม่มีข้อมูลในสัปดาห์นี้</p>";
+      }).join('') || "<p style='text-align:center; padding:20px; font-size:12px; color:#aaa;'>ไม่มีข้อมูลสัปดาห์นี้</p>";
 
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('employee-dashboard').style.display = 'block';
-    } catch(e) { 
-      alert("เกิดข้อผิดพลาดในการโหลดข้อมูลประวัติ: " + e.message); 
-    }
+    } catch(e) { alert("Data Load Error: " + e.message); }
     document.getElementById('loader').style.display = 'none';
   }
 
@@ -297,19 +314,19 @@
     const body = `
       <div style="display:flex; justify-content:space-between; margin-bottom:30px; font-weight:700;"><span>พนักงาน: ${user.name}</span><span>วันที่: ${new Date().toLocaleDateString('th-TH')}</span></div>
       <div style="border-top:1px dashed #ddd; padding:20px 0;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span>ค่าแรงพื้นฐาน (${stats.workD} วัน)</span><span>${stats.gross.toLocaleString()} ฿</span></div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:green;"><span>โบนัสพิเศษ</span><span>+${stats.bonus.toLocaleString()} ฿</span></div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:green;"><span>เบี้ยขยัน</span><span>+${stats.inc.toLocaleString()} ฿</span></div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:red;"><span>หักมาสาย (${stats.lateM} นาที)</span><span>-${(stats.lateM * LATE_RATE).toLocaleString()} ฿</span></div>
-        <div style="display:flex; justify-content:space-between; color:red;"><span>หักเบิกล่วงหน้า</span><span>-${(parseFloat(user.advance) || 0).toLocaleString()} ฿</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span>ค่าแรงพื้นฐาน (${currentStats.workD} วัน)</span><span>${currentStats.gross.toLocaleString()} ฿</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:green; font-weight:600;"><span>โบนัสพิเศษ</span><span>+${currentStats.bonus.toLocaleString()} ฿</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:green; font-weight:600;"><span>เบี้ยขยันสัปดาห์</span><span>+${currentStats.inc.toLocaleString()} ฿</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:red;"><span>หักมาสาย (${currentStats.lateM} นาที)</span><span>-${(currentStats.lateM * LATE_RATE).toLocaleString()} ฿</span></div>
+        <div style="display:flex; justify-content:space-between; color:red;"><span>รายการเบิกล่วงหน้า</span><span>-${(parseFloat(user.advance) || 0).toLocaleString()} ฿</span></div>
       </div>
       <div style="background:#1a0f0d; color:white; padding:35px; border-radius:20px; display:flex; justify-content:space-between; align-items:center; font-size:28px; font-weight:800; margin-top:30px;">
-        <span>สุทธิ</span><span style="color:#d4af37;">${stats.net.toLocaleString()} ฿</span>
+        <span style="font-size:18px; font-weight:400;">สุทธิ</span><span style="color:#d4af37;">${currentStats.net.toLocaleString()} ฿</span>
       </div>
     `;
     document.getElementById('slip-body').innerHTML = body;
     html2canvas(document.getElementById('slip-template'), {scale:2}).then(cvs => {
-      const a = document.createElement('a'); a.download = `Slip_${user.name}.png`; a.href = cvs.toDataURL(); a.click();
+      const a = document.createElement('a'); a.download = `Slip_TW_${user.name}.png`; a.href = cvs.toDataURL(); a.click();
       document.getElementById('loader').style.display = 'none';
     });
   }
