@@ -75,7 +75,7 @@
 
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
     .tile { background: rgba(255, 255, 255, 0.04); border-radius: 25px; padding: 22px; border: 1px solid rgba(255,255,255,0.02); }
-    .tile small { display: block; opacity: 0.4; font-size: 11px; margin-bottom: 8px; font-weight: 600; }
+    .tile small { display: block; opacity: 0.4; font-size: 12px; margin-bottom: 8px; font-weight: 600; }
     .tile strong { font-size: 22px; font-weight: 400; }
 
     .logs-box { background: rgba(0,0,0,0.2); border-radius: 30px; padding: 10px; }
@@ -94,15 +94,14 @@
 
 <div id="loader">
   <div class="spinner"></div>
-  <p style="margin-top: 20px; font-size: 12px; color: var(--accent-gold); letter-spacing: 2px;">SYNCING FROM SHEETS...</p>
+  <p style="margin-top: 20px; font-size: 12px; color: var(--accent-gold); letter-spacing: 2px;">SYNCHRONIZING DATA...</p>
 </div>
 
 <div class="container">
-  <!-- หน้าล็อกอิน -->
   <div id="login-screen">
     <div class="login-box">
       <div class="badge">TW</div>
-      <h2 style="margin:0;">สวัสดิการพนักงาน</h2>
+      <h2 style="margin:0;">พอร์ทัลพนักงาน</h2>
       <p style="opacity:0.4; font-size:13px; margin-bottom:35px;">Thonwithi Cafe Management</p>
       <input type="text" id="user-name" class="field" placeholder="ชื่อ-นามสกุล">
       <input type="password" id="user-pass" class="field" placeholder="รหัสผ่าน">
@@ -110,7 +109,6 @@
     </div>
   </div>
 
-  <!-- หน้าแดชบอร์ด -->
   <div id="dashboard">
     <div class="header">
       <div>
@@ -125,7 +123,7 @@
     <div class="main-card">
       <small>รายรับสุทธิ (รอบ อังคาร-จันทร์)</small>
       <strong id="d-net">0.00 ฿</strong>
-      <button onclick="exportSlip()" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:10px 20px; border-radius:15px; font-size:11px; margin-top:15px; cursor:pointer;">🖨️ บันทึกรูปสลิป</button>
+      <button onclick="exportSlip()" style="background:rgba(255, 255, 255, 0.05); border:1px solid rgba(255,255,255,0.1); color:white; padding:10px 20px; border-radius:15px; font-size:11px; margin-top:15px; cursor:pointer;">🖨️ บันทึกรูปสลิป</button>
     </div>
 
     <div class="grid">
@@ -141,7 +139,6 @@
     </div>
     
     <div id="d-logs" class="logs-box"></div>
-    
     <p style="text-align:center; font-size:10px; opacity:0.2; margin: 40px 0;">THONWITHI MANAGEMENT SYSTEM • REAL-TIME SYNC</p>
   </div>
 </div>
@@ -155,33 +152,39 @@
 </div>
 
 <script>
-  // ลิงก์ API จาก Google Apps Script ของคุณ
   const API_URL = "https://script.google.com/macros/s/AKfycbyfxj9FjtwLlFKGMsZm8eiEAkOXWOehQNl0xtkrR7UlNiT15D66vWIzONZbNDapRxLd/exec";
   const LATE_RATE = 5, GRACE_MS = 60000;
   let user = null, stats = null;
 
-  // ฟังก์ชันล้างช่องว่างและตัวอักษรพิเศษในชื่อเพื่อให้การค้นหาแม่นยำ
   function clean(s) {
     if (!s) return "";
-    return String(s).replace(/\s+/g,'').replace(/\(manual\)/gi,'').trim().toLowerCase();
+    return String(s).replace(/^คุณ/g, '').replace(/\s+/g,'').replace(/\(manual\)/gi,'').trim().toLowerCase();
   }
 
-  // ฟังก์ชันจัดการวันที่ให้รองรับหลายรูปแบบ
   function parseSheetDate(ts) {
     if (!ts) return new Date(0);
-    // กรณี yyyy-MM-dd HH:mm:ss
+    // แปลงช่องว่างเป็น T เพื่อให้เป็นมาตรฐาน ISO
     let d = new Date(ts.replace(' ','T'));
-    if (isNaN(d)) {
-      // กรณี d/M/yyyy HH:mm:ss
-      let p = String(ts).split(' ');
-      let dp = p[0].split('/');
-      if (dp.length === 3) {
-        let year = parseInt(dp[2]);
-        if (year > 2500) year -= 543; // แปลง พ.ศ. เป็น ค.ศ.
-        d = new Date(year, dp[1] - 1, dp[0], 0, 0, 0);
-        if (p[1]) {
-          let tp = p[1].split(':');
-          d.setHours(tp[0], tp[1], tp[2] || 0);
+    
+    // ตรวจสอบปี ถ้ามากกว่า 2400 แสดงว่าเป็น พ.ศ. ให้ลบออก 543 เพื่อเป็น ค.ศ.
+    if (!isNaN(d.getTime()) && d.getFullYear() > 2400) {
+      d.setFullYear(d.getFullYear() - 543);
+    }
+    
+    // ถ้ายังอ่านไม่ออก ให้ลองตัดสตริงแมนนวล (รองรับ d/M/yyyy)
+    if (isNaN(d.getTime())) {
+      let parts = String(ts).split(' ');
+      let dParts = parts[0].split(parts[0].includes('/') ? '/' : '-');
+      if (dParts.length === 3) {
+        let day, month, year;
+        if (dParts[0].length === 4) { [year, month, day] = dParts; }
+        else { [day, month, year] = dParts; }
+        year = parseInt(year);
+        if (year > 2400) year -= 543;
+        d = new Date(year, parseInt(month) - 1, parseInt(day));
+        if (parts[1]) {
+          let tParts = parts[1].split(':');
+          d.setHours(tParts[0], tParts[1], tParts[2] || 0);
         }
       }
     }
@@ -197,7 +200,6 @@
     try {
       const res = await fetch(`${API_URL}?action=getEmployeeSettings`);
       const data = await res.json();
-      // ค้นหาพนักงาน (รองรับทั้งชื่อเล่นและชื่อจริงที่มีอยู่ในระบบ)
       const found = data.find(x => clean(x.name) === clean(n) || clean(x.name).includes(clean(n)));
 
       if (found && p === "1234") { 
@@ -207,7 +209,7 @@
          document.getElementById('loader').style.display = 'none';
       }
     } catch (e) { 
-      alert("⚠️ ไม่สามารถเชื่อมต่อกับ Google Sheets ได้\nกรุณาลองเข้าลิงก์ API ในแท็บใหม่เพื่อกดยอมรับสิทธิ์ก่อน"); 
+      alert("⚠️ ไม่สามารถเชื่อมต่อกับ Google Sheets ได้"); 
       document.getElementById('loader').style.display = 'none';
     }
   }
@@ -217,10 +219,9 @@
       const res = await fetch(`${API_URL}?action=getLogs`);
       const allLogs = await res.json();
       
-      // ตรรกะหา "วันอังคารที่ผ่านมา" เพื่อระบุจุดเริ่มสัปดาห์
       const now = new Date();
       const start = new Date(now); 
-      const dayOffset = (now.getDay() + 5) % 7; // ระยะห่างจากวันอังคาร (อังคาร=0, พุธ=1...)
+      const dayOffset = (now.getDay() + 5) % 7; // รอบวันอังคาร
       start.setDate(now.getDate() - dayOffset); 
       start.setHours(0,0,0,0);
       
@@ -230,7 +231,7 @@
       const daily = {};
       weekLogs.forEach(l => {
         const dt = parseSheetDate(l.timestamp);
-        if (isNaN(dt)) return;
+        if (isNaN(dt.getTime())) return;
         const dS = dt.toISOString().split('T')[0];
         if(!daily[dS]) daily[dS] = { in:dt, out:dt };
         if(dt < daily[dS].in) daily[dS].in = dt;
@@ -254,17 +255,9 @@
 
       const hud = document.getElementById('d-status');
       let okBonus = true;
-      if(lateC === 0) { 
-        hud.className = "status-alert"; 
-        hud.innerHTML = "✨ สัปดาห์นี้คุณรักษาวินัยได้ดีเยี่ยม"; 
-      } else if(lateC <= 2) { 
-        hud.className = "status-alert warn"; 
-        hud.innerHTML = `⚠️ ใบเหลือง: สัปดาห์นี้สาย ${lateC} ครั้ง`; 
-      } else { 
-        hud.className = "status-alert danger"; 
-        hud.innerHTML = "🟥 ใบแดง: สายเกินกำหนด งดโบนัส"; 
-        okBonus = false; 
-      }
+      if(lateC === 0) { hud.className = "status-alert"; hud.innerHTML = "✨ สัปดาห์นี้คุณรักษาวินัยได้ดีเยี่ยม"; }
+      else if(lateC <= 2) { hud.className = "status-alert warn"; hud.innerHTML = `⚠️ ใบเหลือง: สัปดาห์นี้สาย ${lateC} ครั้ง`; }
+      else { hud.className = "status-alert danger"; hud.innerHTML = "🟥 ใบแดง: สายเกินกำหนด งดโบนัส"; okBonus = false; }
 
       const rate = parseFloat(user.rate) || 0;
       const isDaily = user.empType && user.empType.includes("รายวัน");
@@ -281,50 +274,35 @@
       document.getElementById('d-net').innerText = net.toLocaleString(undefined, {minimumFractionDigits:2}) + " ฿";
       document.getElementById('d-work').innerText = workD + " วัน";
       document.getElementById('d-late').innerText = lateC + " ครั้ง";
-      
-      if(!okBonus && parseFloat(user.bonus) > 0) {
-        document.getElementById('d-bonus').innerHTML = `<span style="text-decoration:line-through; opacity:0.4">${user.bonus}</span> <span style="color:var(--danger)">0 ฿</span>`;
-      } else {
-        document.getElementById('d-bonus').innerText = bonus.toLocaleString() + " ฿";
-      }
-      
+      document.getElementById('d-bonus').innerText = bonus.toLocaleString() + " ฿";
       document.getElementById('d-inc').innerText = inc > 0 ? "ได้รับ ✅" : "ไม่ได้ ❌";
 
       document.getElementById('d-logs').innerHTML = weekLogs.slice().reverse().map(l => {
         const dt = parseSheetDate(l.timestamp);
-        let isLate = false;
-        if (user.startTime && !isNaN(dt)) {
-            const [th, tm] = user.startTime.split(':').map(Number);
-            const target = new Date(dt); target.setHours(th, tm, 0, 0);
-            if (dt - target > GRACE_MS) isLate = true;
-        }
         const dateStr = dt.toLocaleDateString('th-TH', {day:'numeric', month:'short'});
         const timeStr = dt.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
-        return `<div class="row"><span>${dateStr}</span><span>ลงเวลา</span><span class="${isLate?'late-text':''}">${timeStr}</span></div>`;
+        return `<div class="row"><span>${dateStr}</span><span>ลงเวลา</span><span>${timeStr}</span></div>`;
       }).join('') || "<p style='text-align:center; padding:20px; opacity:0.3;'>ยังไม่มีข้อมูลการสแกนในรอบอังคาร-จันทร์นี้</p>";
 
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
-    } catch (e) { 
-      console.error(e);
-      alert("Data Sync Error: ข้อมูลไม่สมบูรณ์"); 
-    }
+    } catch (e) { alert("Data Error: ไม่สามารถประมวลผลข้อมูลได้"); }
     document.getElementById('loader').style.display = 'none';
   }
 
   function exportSlip() {
     document.getElementById('loader').style.display = 'flex';
     const body = `
-      <div style="display:flex; justify-content:space-between; margin-bottom:30px; font-weight:700;"><span>พนักงาน: ${user.name}</span><span>วันที่พิมพ์: ${new Date().toLocaleDateString('th-TH')}</span></div>
+      <div style="display:flex; justify-content:space-between; margin-bottom:30px; font-weight:700;"><span>พนักงาน: ${user.name}</span><span>วันที่: ${new Date().toLocaleDateString('th-TH')}</span></div>
       <div style="border-top:1px dashed #ddd; padding:20px 0;">
         <div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span>ค่าแรงพื้นฐาน (${stats.workD} วัน)</span><span>${stats.gross.toLocaleString()} ฿</span></div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:green; font-weight:600;"><span>โบนัสพิเศษประจำสัปดาห์</span><span>+${stats.bonus.toLocaleString()} ฿</span></div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:green; font-weight:600;"><span>เบี้ยขยันรักษาวินัย</span><span>+${stats.inc.toLocaleString()} ฿</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:green; font-weight:600;"><span>โบนัสพิเศษ</span><span>+${stats.bonus.toLocaleString()} ฿</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:green; font-weight:600;"><span>เบี้ยขยัน</span><span>+${stats.inc.toLocaleString()} ฿</span></div>
         <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:red;"><span>หักมาสาย (${stats.lateM} นาที)</span><span>-${(stats.lateM * LATE_RATE).toLocaleString()} ฿</span></div>
-        <div style="display:flex; justify-content:space-between; color:red;"><span>รายการหักเบิกล่วงหน้า</span><span>-${stats.advance.toLocaleString()} ฿</span></div>
+        <div style="display:flex; justify-content:space-between; color:red;"><span>รายการหักเบิก</span><span>-${stats.advance.toLocaleString()} ฿</span></div>
       </div>
       <div style="background:#2b1b17; color:white; padding:35px; border-radius:20px; display:flex; justify-content:space-between; align-items:center; font-size:28px; font-weight:800; margin-top:30px;">
-        <span style="font-size:18px; font-weight:400; opacity:0.8;">ยอดสุทธิที่ได้รับ</span><span style="color:#ffc107;">${stats.net.toLocaleString()} ฿</span>
+        <span>สุทธิ</span><span style="color:#ffc107;">${stats.net.toLocaleString()} ฿</span>
       </div>
     `;
     document.getElementById('slip-body').innerHTML = body;
