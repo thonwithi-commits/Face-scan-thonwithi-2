@@ -75,7 +75,7 @@
 
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
     .tile { background: rgba(255, 255, 255, 0.04); border-radius: 25px; padding: 22px; border: 1px solid rgba(255,255,255,0.02); }
-    .tile small { display: block; opacity: 0.4; font-size: 12px; margin-bottom: 8px; font-weight: 600; }
+    .tile small { display: block; opacity: 0.4; font-size: 11px; margin-bottom: 8px; font-weight: 600; }
     .tile strong { font-size: 22px; font-weight: 400; }
 
     .logs-box { background: rgba(0,0,0,0.2); border-radius: 30px; padding: 10px; }
@@ -144,7 +144,7 @@
 </div>
 
 <div id="slip-render">
-  <div id="slip-tpl" style="width:500px; background:white; color:#111; padding:60px; font-family:'Sarabun';">
+  <div id="slip-tpl" style="width:500px; background:white; color:#111; padding:60px; font-family:'Sarabun'; border: 1px solid #eee;">
     <h1 style="text-align:center; color:#2b1b17; margin:0;">Thonwithi Cafe</h1>
     <p style="text-align:center; border-bottom:2px solid #2b1b17; padding-bottom:20px; color:#777; margin-top:10px;">ใบแจ้งรายละเอียดรายได้พนักงาน</p>
     <div id="slip-body"></div>
@@ -158,20 +158,20 @@
 
   function clean(s) {
     if (!s) return "";
-    return String(s).replace(/^คุณ/g, '').replace(/\s+/g,'').replace(/\(manual\)/gi,'').trim().toLowerCase();
+    return String(s).replace(/^คุณ\s*/g, '').replace(/\s+/g,'').replace(/\(manual\)/gi,'').trim().toLowerCase();
   }
 
   function parseSheetDate(ts) {
     if (!ts) return new Date(0);
-    // แปลงช่องว่างเป็น T เพื่อให้เป็นมาตรฐาน ISO
+    // กรณีที่ส่งมาจาก code.gs เป็น ISO (yyyy-MM-dd HH:mm:ss)
     let d = new Date(ts.replace(' ','T'));
     
-    // ตรวจสอบปี ถ้ามากกว่า 2400 แสดงว่าเป็น พ.ศ. ให้ลบออก 543 เพื่อเป็น ค.ศ.
+    // ตรวจสอบปี (ถ้าเป็น พ.ศ. ให้แปลงเป็น ค.ศ.)
     if (!isNaN(d.getTime()) && d.getFullYear() > 2400) {
       d.setFullYear(d.getFullYear() - 543);
     }
     
-    // ถ้ายังอ่านไม่ออก ให้ลองตัดสตริงแมนนวล (รองรับ d/M/yyyy)
+    // กรณี d/M/yyyy (รูปแบบเดิมที่พบบ่อย)
     if (isNaN(d.getTime())) {
       let parts = String(ts).split(' ');
       let dParts = parts[0].split(parts[0].includes('/') ? '/' : '-');
@@ -219,12 +219,14 @@
       const res = await fetch(`${API_URL}?action=getLogs`);
       const allLogs = await res.json();
       
+      // หาจุดเริ่มรอบสัปดาห์ (วันอังคารที่ผ่านมา)
       const now = new Date();
       const start = new Date(now); 
-      const dayOffset = (now.getDay() + 5) % 7; // รอบวันอังคาร
+      const dayOffset = (now.getDay() + 5) % 7; 
       start.setDate(now.getDate() - dayOffset); 
       start.setHours(0,0,0,0);
       
+      // กรองเฉพาะประวัติของคนนี้และอยู่ในรอบสัปดาห์
       const myLogs = allLogs.filter(l => clean(l.name) === clean(user.name));
       const weekLogs = myLogs.filter(l => parseSheetDate(l.timestamp) >= start);
 
@@ -269,7 +271,7 @@
 
       stats = { net, workD, lateC, bonus, inc, gross, lateM, advance };
 
-      document.getElementById('d-name').innerText = "สวัสดี, คุณ" + user.name;
+      document.getElementById('d-name').innerText = "สวัสดี, " + user.name;
       document.getElementById('d-dept').innerText = "แผนก: " + (user.dept || "ทั่วไป");
       document.getElementById('d-net').innerText = net.toLocaleString(undefined, {minimumFractionDigits:2}) + " ฿";
       document.getElementById('d-work').innerText = workD + " วัน";
@@ -282,11 +284,11 @@
         const dateStr = dt.toLocaleDateString('th-TH', {day:'numeric', month:'short'});
         const timeStr = dt.toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'});
         return `<div class="row"><span>${dateStr}</span><span>ลงเวลา</span><span>${timeStr}</span></div>`;
-      }).join('') || "<p style='text-align:center; padding:20px; opacity:0.3;'>ยังไม่มีข้อมูลการสแกนในรอบอังคาร-จันทร์นี้</p>";
+      }).join('') || "<p style='text-align:center; padding:20px; opacity:0.3;'>ไม่มีข้อมูลสแกนในรอบอังคาร-จันทร์นี้</p>";
 
       document.getElementById('login-screen').style.display = 'none';
       document.getElementById('dashboard').style.display = 'block';
-    } catch (e) { alert("Data Error: ไม่สามารถประมวลผลข้อมูลได้"); }
+    } catch (e) { alert("Data Processing Error: ตรวจสอบลำดับคอลัมน์ใน Sheet"); }
     document.getElementById('loader').style.display = 'none';
   }
 
@@ -296,7 +298,7 @@
       <div style="display:flex; justify-content:space-between; margin-bottom:30px; font-weight:700;"><span>พนักงาน: ${user.name}</span><span>วันที่: ${new Date().toLocaleDateString('th-TH')}</span></div>
       <div style="border-top:1px dashed #ddd; padding:20px 0;">
         <div style="display:flex; justify-content:space-between; margin-bottom:12px;"><span>ค่าแรงพื้นฐาน (${stats.workD} วัน)</span><span>${stats.gross.toLocaleString()} ฿</span></div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:green; font-weight:600;"><span>โบนัสพิเศษ</span><span>+${stats.bonus.toLocaleString()} ฿</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:green; font-weight:600;"><span>โบนัสพิเศษสัปดาห์</span><span>+${stats.bonus.toLocaleString()} ฿</span></div>
         <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:green; font-weight:600;"><span>เบี้ยขยัน</span><span>+${stats.inc.toLocaleString()} ฿</span></div>
         <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:red;"><span>หักมาสาย (${stats.lateM} นาที)</span><span>-${(stats.lateM * LATE_RATE).toLocaleString()} ฿</span></div>
         <div style="display:flex; justify-content:space-between; color:red;"><span>รายการหักเบิก</span><span>-${stats.advance.toLocaleString()} ฿</span></div>
