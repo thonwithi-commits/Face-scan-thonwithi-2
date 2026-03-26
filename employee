@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Thonwithi - ระบบพนักงาน (GitHub)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --bg-dark: #1a0f0d; 
+      --coffee-deep: #2b1b17;
+      --text-cream: #fdfaf7;
+      --accent-gold: #d4af37;
+      --glass-card: rgba(255, 255, 255, 0.03);
+      --success-glow: #aed581;
+      --danger-glow: #ff8a80;
+      --warning-glow: #ffd54f;
+    }
+
+    body { 
+      font-family: 'Sarabun', sans-serif; 
+      margin: 0; padding: 0;
+      background-color: var(--bg-dark);
+      background-image: 
+        radial-gradient(circle at 0% 0%, rgba(212, 175, 55, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(62, 39, 35, 0.4) 0%, transparent 50%);
+      color: var(--text-cream);
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    .container { width: 100%; max-width: 480px; margin: 0 auto; padding: 25px; box-sizing: border-box; }
+
+    /* Login Section */
+    #login-screen { flex: 1; display: flex; align-items: center; justify-content: center; }
+    .auth-glass-box {
+      background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 40px;
+      padding: 50px 35px; text-align: center; width: 100%;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+    }
+    .brand-logo {
+      width: 85px; height: 85px; background: var(--text-cream);
+      border-radius: 26px; margin: 0 auto 35px; display: flex; align-items: center; justify-content: center;
+      font-size: 34px; color: var(--coffee-deep); font-weight: 800;
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.15);
+    }
+
+    .neo-input {
+      width: 100%; padding: 18px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.3); color: white; font-size: 16px; box-sizing: border-box; margin-bottom: 20px; outline: none;
+    }
+
+    .btn-action {
+      width: 100%; padding: 18px; border-radius: 20px; border: none;
+      font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.3s;
+      font-family: 'Sarabun'; background: var(--text-cream); color: var(--coffee-deep);
+    }
+
+    /* Dashboard Section */
+    #employee-dashboard { display: none; }
+    
+    .status-hud {
+      padding: 18px; border-radius: 25px; margin-bottom: 25px; text-align: center;
+      font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1); background: var(--glass-card);
+    }
+    .hud-safe { color: var(--success-glow); }
+    .hud-warn { color: var(--warning-glow); }
+    .hud-danger { color: var(--danger-glow); animation: pulse 2s infinite; }
+
+    .income-glow-card {
+      background: var(--text-cream); border-radius: 40px; padding: 45px 30px;
+      text-align: center; margin-bottom: 25px; color: var(--coffee-deep);
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4); border: 1px solid white;
+    }
+    .income-glow-card strong { font-size: 46px; font-weight: 800; letter-spacing: -1px; }
+
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+    .stat-tile { background: var(--glass-card); border-radius: 28px; padding: 22px; text-align: center; border: 1px solid rgba(255, 255, 255, 0.05); }
+    .stat-tile small { display: block; opacity: 0.5; font-size: 10px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 1px; }
+
+    .log-glass-box { background: rgba(0, 0, 0, 0.2); border-radius: 35px; padding: 10px; border: 1px solid rgba(255, 255, 255, 0.03); }
+    .log-item { display: flex; justify-content: space-between; padding: 18px 25px; border-bottom: 1px solid rgba(255, 255, 255, 0.03); font-size: 13px; }
+
+    #loading-overlay { 
+      position: fixed; inset: 0; background: var(--bg-dark);
+      display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10000;
+    }
+    .spin { width: 45px; height: 45px; border: 3px solid rgba(255, 255, 255, 0.05); border-top-color: var(--accent-gold); border-radius: 50%; animation: rot 1s linear infinite; }
+
+    @keyframes rot { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    #slip-render-area { position: absolute; left: -9999px; }
+  </style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="spin"></div>
+  <p style="margin-top: 20px; color: var(--accent-gold); font-weight: 700; letter-spacing: 2px;">SYNCHRONIZING...</p>
+</div>
+
+<div class="container">
+  <!-- ล็อกอิน -->
+  <div id="login-screen">
+    <div class="auth-glass-box" style="animation: slideUp 0.8s ease-out;">
+      <div class="brand-logo">TW</div>
+      <h2 style="margin: 0 0 10px 0;">THONWITHI</h2>
+      <p style="opacity: 0.4; font-size: 12px; margin-bottom: 40px; letter-spacing: 3px;">พอร์ทัลส่วนตัวพนักงาน</p>
+      
+      <input type="text" id="input-name" class="neo-input" placeholder="ระบุชื่อพนักงาน">
+      <input type="password" id="input-pass" class="neo-input" placeholder="พาสเวิร์ด (1234)">
+      <button class="btn-action" onclick="login()">เข้าสู่ระบบ</button>
+    </div>
+  </div>
+
+  <!-- แดชบอร์ด -->
+  <div id="employee-dashboard" style="animation: slideUp 0.6s ease-out;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;">
+      <div>
+        <h3 id="ui-name" style="margin:0; font-size:22px; color:var(--text-cream);">สวัสดี...</h3>
+        <small id="ui-dept" style="color:var(--accent-gold); font-weight:700;"></small>
+      </div>
+      <button onclick="location.reload()" style="background:rgba(255, 255, 255, 0.05); border:1px solid rgba(255, 255, 255, 0.1); color:var(--danger-glow); padding:10px 18px; border-radius:15px; font-size:10px; font-weight:700; cursor:pointer;">ออกงาน</button>
+    </div>
+
+    <div id="status-card-ui" class="status-hud"></div>
+
+    <div class="income-glow-card">
+      <small>รายได้สุทธิประมาณการ (สัปดาห์นี้)</small>
+      <strong id="ui-net">0.00 ฿</strong>
+      <div style="margin-top: 25px;">
+        <button class="btn-action" style="background: var(--coffee-deep); color: var(--accent-gold); width: auto; padding: 12px 30px; font-size: 11px; border-radius: 15px;" onclick="downloadSlip()">🖨️ ดาวน์โหลดสลิป</button>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-tile" style="border-bottom: 3px solid var(--success-glow);">
+        <small>มาทำงาน</small><strong id="ui-work">0 วัน</strong>
+      </div>
+      <div class="stat-tile" style="border-bottom: 3px solid var(--danger-glow);">
+        <small>มาสาย</small><strong id="ui-late" style="color:var(--danger-glow)">0 ครั้ง</strong>
+      </div>
+      <div class="stat-tile" style="border-bottom: 3px solid var(--accent-gold);">
+        <small>โบนัส</small><div id="ui-bonus" style="font-weight:700; color:var(--accent-gold);">0 ฿</div>
+      </div>
+      <div class="stat-tile" style="border-bottom: 3px solid #fff;">
+        <small>เบี้ยขยัน</small><strong id="ui-inc">-</strong>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 0 10px;">
+      <p style="font-size: 13px; font-weight: 700; color: var(--accent-gold); margin: 0; text-transform: uppercase;">Time Logs</p>
+      <span style="font-size: 10px; opacity: 0.3;">Grace period: 1 min</span>
+    </div>
+    
+    <div id="ui-logs" class="log-glass-box"></div>
+  </div>
+</div>
+
+<div id="slip-render-area">
+  <div id="slip-template" style="width:500px; background:white; color:#111; padding:60px; font-family:'Sarabun';">
+    <h1 style="text-align:center; color:#2b1b17; margin:0;">Thonwithi Cafe</h1>
+    <p style="text-align:center; border-bottom:3px solid #2b1b17; padding-bottom:30px; color:#8d6e63;">ใบแจ้งยอดรายได้พนักงาน</p>
+    <div id="slip-content"></div>
+  </div>
+</div>
+
+<script>
+  // เปลี่ยนเป็น URL ของคุณ
+  const API_URL = "https://script.google.com/macros/s/AKfycbyfxj9FjtwLlFKGMsZm8eiEAkOXWOehQNl0xtkrR7UlNiT15D66vWIzONZbNDapRxLd/exec";
+  const LATE_RATE = 5, GRACE = 60000;
+  let currentUser = null, currentStats = null;
+
+  async function login() {
+    const n = document.getElementById('input-name').value.trim();
+    const p = document.getElementById('input-pass').value.trim();
+    if(!n || !p) return;
+
+    document.getElementById('loading-overlay').style.display = 'flex';
+    try {
+      const res = await fetch(`${API_URL}?action=getEmployeeSettings`);
+      const settings = await res.json();
+      const found = settings.find(s => s.name.replace(/\s+/g,'').toLowerCase() === n.replace(/\s+/g,'').toLowerCase());
+
+      if (found && p === "1234") { 
+         currentUser = found; await loadDashboard();
+      } else {
+         alert("ชื่อพนักงานหรือรหัสผ่านไม่ถูกต้อง");
+         document.getElementById('loading-overlay').style.display = 'none';
+      }
+    } catch (e) { alert("เชื่อมต่อ API ล้มเหลว"); document.getElementById('loading-overlay').style.display = 'none'; }
+  }
+
+  async function loadDashboard() {
+    document.getElementById('ui-name').innerText = "สวัสดี, " + currentUser.name;
+    document.getElementById('ui-dept').innerText = "ฝ่าย: " + (currentUser.dept || "ทั่วไป");
+
+    const res = await fetch(`${API_URL}?action=getLogs`);
+    const allLogs = await res.json();
+    
+    const now = new Date();
+    const start = new Date(now); start.setDate(now.getDate() - ((now.getDay() + 5) % 7)); start.setHours(0,0,0,0);
+    
+    const myLogs = allLogs.filter(l => l.name.replace(/\s+/g,'').toLowerCase() === currentUser.name.replace(/\s+/g,'').toLowerCase());
+    const weekLogs = myLogs.filter(l => new Date(l.timestamp.replace(' ','T')) >= start);
+
+    const daily = {};
+    weekLogs.forEach(l => {
+      const dS = l.timestamp.split(' ')[0];
+      const dt = new Date(l.timestamp.replace(' ','T'));
+      if(!daily[dS]) daily[dS] = { in:null, out:null };
+      if(l.type.includes('เข้า') && (!daily[dS].in || dt < daily[dS].in)) daily[dS].in = dt;
+      if(l.type.includes('ออก') && (!daily[dS].out || dt > daily[dS].out)) daily[dS].out = dt;
+    });
+
+    let lateM = 0, lateC = 0, workD = 0, hrs = 0;
+    for(let d in daily) {
+      if(daily[d].in) {
+        workD++;
+        if(currentUser.startTime && currentUser.startTime.includes(':')) {
+          const [th, tm] = currentUser.startTime.split(':').map(Number);
+          const target = new Date(daily[d].in); target.setHours(th, tm, 0, 0);
+          if(daily[d].in - target > GRACE) { lateM += Math.ceil((daily[d].in - target)/60000); lateC++; }
+        }
+        if(daily[d].out > daily[d].in) hrs += (daily[d].out - daily[d].in)/3600000;
+      }
+    }
+
+    const hud = document.getElementById('status-card-ui');
+    let eligibleBonus = true;
+    if(lateC === 0) { hud.className = "status-hud hud-safe"; hud.innerHTML = "STATUS: EXCELLENT ✅"; }
+    else if(lateC <= 2) { hud.className = "status-hud hud-warn"; hud.innerHTML = `STATUS: WARNING (ใบเหลืองที่ ${lateC}) 🟨`; }
+    else { hud.className = "status-hud hud-danger"; hud.innerHTML = "STATUS: DISCIPLINARY RED 🟥"; eligibleBonus = false; }
+
+    const rate = parseFloat(currentUser.rate) || 0;
+    const gross = (currentUser.empType || "").includes("รายวัน") ? (workD * rate) : (hrs * rate);
+    const inc = (lateC === 0 && workD > 0) ? 125 : 0;
+    const bonus = eligibleBonus ? parseFloat(currentUser.bonus) : 0;
+    const advance = parseFloat(currentUser.advance) || 0;
+    const net = Math.max(0, gross + bonus + inc - (lateM * LATE_RATE) - advance);
+
+    currentStats = { net, workD, lateC, bonus, inc, gross, lateM, advance };
+
+    document.getElementById('ui-net').innerText = net.toLocaleString(undefined, {minimumFractionDigits:2}) + " ฿";
+    document.getElementById('ui-work').innerText = workD + " วัน";
+    document.getElementById('ui-late').innerText = lateC + " ครั้ง";
+    document.getElementById('ui-bonus').innerHTML = eligibleBonus ? (bonus + " ฿") : `<span style="text-decoration:line-through; opacity:0.3;">${currentUser.bonus}</span> <span style="color:var(--danger-glow)">0 ฿</span>`;
+    document.getElementById('ui-inc').innerText = inc > 0 ? "Qualified ✅" : "Voided ❌";
+
+    document.getElementById('ui-logs').innerHTML = weekLogs.slice().reverse().map(l => 
+      `<div class="log-item"><span>${l.timestamp.split(' ')[0]}</span><span style="font-weight:700;">${l.type}</span><span style="opacity:0.6;">${l.timestamp.split(' ')[1]}</span></div>`
+    ).join('') || "<p style='text-align:center; opacity:0.2; padding:20px;'>NO DATA</p>";
+
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('employee-dashboard').style.display = 'block';
+    document.getElementById('loading-overlay').style.display = 'none';
+  }
+
+  function downloadSlip() {
+    document.getElementById('loading-overlay').style.display = 'flex';
+    const html = `
+      <div style="display:flex; justify-content:space-between; margin-bottom:20px; font-weight:700;"><span>พนักงาน: ${currentUser.name}</span><span>วันที่: ${new Date().toLocaleDateString('th-TH')}</span></div>
+      <div style="border-top:1px dashed #ddd; padding:20px 0;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span>ค่าแรง (${currentStats.workD} วัน)</span><span>${currentStats.gross.toLocaleString()} ฿</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#558b2f;"><span>โบนัสสะสม</span><span>+${currentStats.bonus.toLocaleString()} ฿</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#558b2f;"><span>เบี้ยขยัน</span><span>+${currentStats.inc.toLocaleString()} ฿</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#c62828;"><span>หักมาสาย (${currentStats.lateM} นาที)</span><span>-${(currentStats.lateM * LATE_RATE).toLocaleString()} ฿</span></div>
+        <div style="display:flex; justify-content:space-between; color:#c62828;"><span>หักเบิกล่วงหน้า</span><span>-${currentStats.advance.toLocaleString()} ฿</span></div>
+      </div>
+      <div style="background:#2b1b17; color:white; padding:30px; border-radius:20px; display:flex; justify-content:space-between; align-items:center; font-size:26px; font-weight:800; margin-top:20px;">
+        <span>ยอดรับสุทธิ</span><span style="color:#d4af37;">${currentStats.net.toLocaleString()} ฿</span>
+      </div>
+    `;
+    document.getElementById('slip-content').innerHTML = html;
+    html2canvas(document.getElementById('slip-template'), {scale:2}).then(cvs => {
+      const a = document.createElement('a'); a.download = `Slip_Thonwithi_${currentUser.name}.png`; a.href = cvs.toDataURL(); a.click();
+      document.getElementById('loading-overlay').style.display = 'none';
+    });
+  }
+</script>
+</body>
+</html>
