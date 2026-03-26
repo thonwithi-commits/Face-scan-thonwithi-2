@@ -7,37 +7,86 @@
   <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
-    :root { --bg-dark: #2b1b17; --card-inner: #3e2723; --accent-gold: #ffc107; --text-white: #fdfaf7; --danger: #ff5252; --success: #81c784; }
-    body { font-family: 'Sarabun', sans-serif; margin: 0; padding: 0; background-color: var(--bg-dark); background-image: radial-gradient(circle at top right, #4e342e, #2b1b17); color: var(--text-white); min-height: 100vh; }
+    :root {
+      --bg-dark: #2b1b17;
+      --card-inner: #3e2723;
+      --accent-gold: #ffc107;
+      --text-white: #fdfaf7;
+      --danger: #ff5252;
+      --success: #81c784;
+    }
+
+    body { 
+      font-family: 'Sarabun', sans-serif; 
+      margin: 0; padding: 0;
+      background-color: var(--bg-dark);
+      background-image: radial-gradient(circle at top right, #4e342e, #2b1b17);
+      color: var(--text-white);
+      min-height: 100vh;
+    }
+
     .container { width: 100%; max-width: 480px; margin: 0 auto; padding: 20px; box-sizing: border-box; }
+
+    /* --- Authentication --- */
     #login-screen { display: flex; align-items: center; justify-content: center; height: 85vh; }
-    .login-box { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); border-radius: 35px; padding: 50px 30px; text-align: center; width: 100%; border: 1px solid rgba(255,255,255,0.1); }
-    .badge { width: 70px; height: 70px; background: var(--accent-gold); border-radius: 20px; margin: 0 auto 25px; display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--bg-dark); font-weight: 800; }
-    .field { width: 100%; padding: 18px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: white; font-size: 16px; box-sizing: border-box; margin-bottom: 20px; outline: none; }
-    .btn-login { width: 100%; padding: 18px; border-radius: 18px; border: none; font-weight: 700; font-size: 16px; cursor: pointer; background: var(--accent-gold); color: var(--bg-dark); }
+    .login-box {
+      background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px);
+      border-radius: 35px; padding: 50px 30px; text-align: center; width: 100%;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .badge {
+      width: 70px; height: 70px; background: var(--accent-gold); border-radius: 20px;
+      margin: 0 auto 25px; display: flex; align-items: center; justify-content: center;
+      font-size: 28px; color: var(--bg-dark); font-weight: 800;
+    }
+
+    .field {
+      width: 100%; padding: 18px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(0,0,0,0.3); color: white; font-size: 16px; box-sizing: border-box; margin-bottom: 20px; outline: none;
+    }
+    .btn-login {
+      width: 100%; padding: 18px; border-radius: 18px; border: none; font-weight: 700;
+      font-size: 16px; cursor: pointer; background: var(--accent-gold); color: var(--bg-dark);
+    }
+
+    /* --- Dashboard --- */
     #dashboard { display: none; animation: fadeIn 0.5s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
     .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
     .header h3 { margin: 0; font-size: 24px; color: var(--accent-gold); font-weight: 700; }
     .header p { margin: 3px 0 0 0; opacity: 0.6; font-size: 13px; }
     .btn-logout { background: none; border: none; color: var(--danger); font-weight: 700; font-size: 12px; cursor: pointer; }
-    .status-alert { background: rgba(129, 199, 132, 0.1); color: var(--success); padding: 15px; border-radius: 20px; margin-bottom: 20px; text-align: center; font-weight: 600; border: 1px solid rgba(129, 199, 132, 0.15); display: flex; align-items: center; justify-content: center; gap: 8px; }
+
+    .status-alert {
+      background: rgba(129, 199, 132, 0.1); color: var(--success); padding: 15px; border-radius: 20px;
+      margin-bottom: 20px; text-align: center; font-weight: 600; border: 1px solid rgba(129, 199, 132, 0.15);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
     .status-alert.warn { color: var(--accent-gold); background: rgba(255, 193, 7, 0.05); border-color: rgba(255, 193, 7, 0.1); }
     .status-alert.danger { color: var(--danger); background: rgba(255, 82, 82, 0.05); border-color: rgba(255, 82, 82, 0.1); }
-    .main-card { background: rgba(255, 255, 255, 0.05); border-radius: 35px; padding: 40px 20px; margin-bottom: 25px; text-align: center; border: 1px solid rgba(255,255,255,0.03); }
+
+    .main-card {
+      background: rgba(255, 255, 255, 0.05); border-radius: 35px; padding: 40px 20px;
+      margin-bottom: 25px; text-align: center; border: 1px solid rgba(255,255,255,0.03);
+    }
     .main-card small { display: block; opacity: 0.6; font-size: 13px; margin-bottom: 5px; }
     .main-card strong { font-size: 48px; font-weight: 400; letter-spacing: -1px; }
+
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
     .tile { background: rgba(255, 255, 255, 0.04); border-radius: 25px; padding: 22px; border: 1px solid rgba(255,255,255,0.02); }
     .tile small { display: block; opacity: 0.4; font-size: 11px; margin-bottom: 8px; font-weight: 600; }
     .tile strong { font-size: 22px; font-weight: 400; }
+
     .logs-box { background: rgba(0,0,0,0.2); border-radius: 30px; padding: 10px; }
     .row { display: flex; justify-content: space-between; padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 13px; }
     .row:last-child { border-bottom: none; }
     .late-text { color: var(--danger); font-weight: 700; }
+
     #loader { position: fixed; inset: 0; background: var(--bg-dark); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
     .spinner { width: 40px; height: 40px; border: 3px solid rgba(255,193,7,0.1); border-top-color: var(--accent-gold); border-radius: 50%; animation: rot 1s linear infinite; }
     @keyframes rot { to { transform: rotate(360deg); } }
+
     #slip-render { position: absolute; left: -9999px; }
   </style>
 </head>
@@ -49,17 +98,19 @@
 </div>
 
 <div class="container">
+  <!-- หน้าล็อกอิน -->
   <div id="login-screen">
     <div class="login-box">
       <div class="badge">TW</div>
       <h2 style="margin:0;">พอร์ทัลพนักงาน</h2>
       <p style="opacity:0.4; font-size:13px; margin-bottom:35px;">Thonwithi Cafe Management</p>
       <input type="text" id="user-name" class="field" placeholder="ชื่อ-นามสกุล">
-      <input type="password" id="user-pass" class="field" placeholder="รหัสผ่าน (1234)">
+      <input type="password" id="user-pass" class="field" placeholder="รหัสผ่านส่วนตัว">
       <button class="btn-login" onclick="login()">เข้าสู่ระบบ</button>
     </div>
   </div>
 
+  <!-- หน้าแดชบอร์ด -->
   <div id="dashboard">
     <div class="header">
       <div>
@@ -103,7 +154,7 @@
 </div>
 
 <script>
-  // URL API ต้องเป็นอันล่าสุดที่เพิ่ง Deploy มา
+  // URL API อ้างอิงจากระบบปัจจุบันของคุณ
   const API_URL = "https://script.google.com/macros/s/AKfycbyfxj9FjtwLlFKGMsZm8eiEAkOXWOehQNl0xtkrR7UlNiT15D66vWIzONZbNDapRxLd/exec";
   
   const LATE_RATE = 5;
@@ -124,16 +175,18 @@
       const res = await fetch(`${API_URL}?action=getEmployeeSettings`);
       const data = await res.json();
       
+      // ค้นหาพนักงานจากชื่อ
       user = data.find(s => cleanName(s.name) === cleanName(n));
 
-      if (user && p === "1234") { 
+      // ตรวจสอบรหัสผ่าน: เทียบกับรหัสใน Google Sheets (หากช่องว่างในชีต จะเป็น 1234 อัตโนมัติจากฝั่ง Server)
+      if (user && p === user.password) { 
          await loadDashboard();
       } else {
          alert("ชื่อพนักงานหรือรหัสผ่านไม่ถูกต้อง");
          document.getElementById('loader').style.display = 'none';
       }
     } catch (e) { 
-      alert("⚠️ ไม่สามารถเชื่อมต่อกับ Google Sheets ได้"); 
+      alert("⚠️ ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้"); 
       document.getElementById('loader').style.display = 'none';
     }
   }
@@ -143,7 +196,7 @@
       const res = await fetch(`${API_URL}?action=getLogs`);
       const allLogs = await res.json();
       
-      // คำนวณรอบสัปดาห์ (อังคาร - จันทร์) แบบเดียวกับ payroll.html
+      // คำนวณรอบสัปดาห์ (อังคาร - จันทร์) แบบเดียวกับหน้าแอดมิน Payroll
       const n = new Date();
       const cD = n.getDay();
       const dST = (cD + 5) % 7;
@@ -157,7 +210,7 @@
 
       document.getElementById('week-display').innerText = `${sD.toLocaleDateString('th-TH')} - ${eD.toLocaleDateString('th-TH')}`;
 
-      // กรองเฉพาะประวัติพนักงานคนนี้ และอยู่ในช่วงเวลา
+      // กรองประวัติพนักงานเฉพาะคนนี้ และอยู่ในช่วงเวลาอังคาร-จันทร์
       const weekLogs = allLogs.filter(l => {
         if (cleanName(l.name) !== cleanName(user.name)) return false;
         let ld = new Date(String(l.timestamp).replace(' ','T')); 
@@ -224,7 +277,7 @@
       
       document.getElementById('d-inc').innerText = inc > 0 ? "ได้รับ ✅" : "ไม่ได้ ❌";
 
-      // แสดงประวัติ (เรียงจากล่าสุด)
+      // แสดงประวัติ (เรียงจากล่าสุดลงมา)
       document.getElementById('d-logs').innerHTML = weekLogs.slice().reverse().map(l => {
         let ld = new Date(String(l.timestamp).replace(' ','T')); 
         if(isNaN(ld)) ld = new Date(l.timestamp);
@@ -259,7 +312,7 @@
         <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:green; font-weight:600;"><span>โบนัสพิเศษสัปดาห์</span><span>+${stats.bonus.toLocaleString()} ฿</span></div>
         <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:green; font-weight:600;"><span>เบี้ยขยัน</span><span>+${stats.inc.toLocaleString()} ฿</span></div>
         <div style="display:flex; justify-content:space-between; margin-bottom:12px; color:red;"><span>หักมาสาย (${stats.lateM} นาที)</span><span>-${(stats.lateM * LATE_RATE).toLocaleString()} ฿</span></div>
-        <div style="display:flex; justify-content:space-between; color:red;"><span>รายการหักเบิก</span><span>-${stats.advance.toLocaleString()} ฿</span></div>
+        <div style="display:flex; justify-content:space-between; color:red;"><span>รายการหักเบิกล่วงหน้า</span><span>-${stats.advance.toLocaleString()} ฿</span></div>
       </div>
       <div style="background:#2b1b17; color:white; padding:35px; border-radius:20px; display:flex; justify-content:space-between; align-items:center; font-size:28px; font-weight:800; margin-top:30px;">
         <span style="font-size:18px; font-weight:400; opacity:0.8;">ยอดสุทธิ</span><span style="color:#ffc107;">${stats.net.toLocaleString()} ฿</span>
