@@ -79,6 +79,7 @@
     .info-card.success-border { border-left: 5px solid var(--success); }
     .info-card.danger-border { border-left: 5px solid var(--danger); }
     .info-card.info-border { border-left: 5px solid var(--info); }
+    .info-card.warning-border { border-left: 5px solid var(--warning); }
 
     /* Navigation Tabs */
     .nav-tabs { display: flex; gap: 8px; margin-bottom: 25px; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 18px; width: fit-content; }
@@ -185,7 +186,8 @@
     <div class="info-grid">
       <div class="info-card"><small>พนักงาน</small><strong id="stat-staff">0</strong></div>
       <div class="info-card success-border"><small>ยอดจ่ายสุทธิ</small><strong id="stat-total">0.00 ฿</strong></div>
-      <div class="info-card accent-border"><small>โบนัสรวม (+ส่วนแบ่ง)</small><strong id="stat-bonus" style="color:var(--info)">0 ฿</strong></div>
+      <div class="info-card accent-border"><small>โบนัสรวม (+ส่วนแบ่ง)</small><strong id="stat-bonus-total" style="color:var(--info)">0 ฿</strong></div>
+      <div class="info-card warning-border"><small>เบี้ยขยันรวม</small><strong id="stat-incentive-total" style="color:var(--warning)">0 ฿</strong></div>
       <div class="info-card info-border"><small>ได้รับเบี้ยขยัน</small><strong id="stat-incentive-count" style="color:var(--success)">0</strong></div>
     </div>
 
@@ -412,7 +414,7 @@
     }
     const extraBonus = eligibleForSharing.length > 0 ? (totalRevokedBonus / eligibleForSharing.length) : 0;
 
-    let tP = 0, tBT = 0, tIC = 0;
+    let tP = 0, tBT = 0, tIC = 0, tIT = 0;
     const tb = document.getElementById('payroll-body');
     globalSummary = summary;
     
@@ -426,7 +428,11 @@
       let bonusP = (!revokedBonuses.has(s.config.name) && isEligibleForBonus) ? (s.config.bonus + extraBonus) : 0;
       const net = Math.max(0, gross + bonusP + incP - lateD - s.config.advance);
       s.calculated = { gross, lateD, incP, bonusP, net };
-      tP += net; tBT += (bonusP + incP); if(incP > 0) tIC++;
+      
+      tP += net; 
+      tBT += bonusP; // ยอดโบนัสอย่างเดียว
+      tIT += incP;   // ยอดเบี้ยขยันอย่างเดียว
+      if(incP > 0) tIC++;
 
       let bonusUI = `+${bonusP.toFixed(0)}฿`;
       if(s.config.bonus > 0 || extraBonus > 0){
@@ -446,7 +452,8 @@
     }).join('');
 
     document.getElementById('stat-total').innerText = tP.toLocaleString() + ' ฿';
-    document.getElementById('stat-bonus').innerText = tBT.toLocaleString() + ' ฿';
+    document.getElementById('stat-bonus-total').innerText = tBT.toLocaleString() + ' ฿';
+    document.getElementById('stat-incentive-total').innerText = tIT.toLocaleString() + ' ฿';
     document.getElementById('stat-incentive-count').innerText = tIC + ' คน';
   }
 
